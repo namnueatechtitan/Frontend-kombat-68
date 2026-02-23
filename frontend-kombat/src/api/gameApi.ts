@@ -1,4 +1,20 @@
-// services/gameapi.ts
+// -------------------- MINION TYPE COUNT --------------------
+
+export const setMinionTypeCount = async (count: number) => {
+  const res = await fetch("/api/game/minion-type-count", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ count }),
+  })
+
+  if (!res.ok) {
+    throw new Error("Failed to set minion type count")
+  }
+
+  return res
+}
 
 // -------------------- MODE --------------------
 

@@ -3,12 +3,12 @@ import GameWrapper from "./components/GameWrapper"
 import StartPage from "./pages/StartPage"
 import ConfigPage from "./pages/ConfigPage"
 import ModePage from "./pages/ModePage"
-import MinionTypePage from "./pages/MinionTypePage.tsx"
+import MinionTypePage from "./pages/MinionTypePage"
 import { setMode } from "./api/gameApi"
 
 function App() {
   const [page, setPage] = useState<
-    "start" | "config" | "mode" | "minion"
+    "start" | "config" | "mode" | "minion" | "minionSetup"
   >("start")
 
   const handleModeConfirm = async (
@@ -21,9 +21,6 @@ function App() {
 
       console.log("Backend response:", result)
 
-      alert("Mode saved successfully!")
-
-      
       setPage("minion")
 
     } catch (error) {
@@ -61,9 +58,17 @@ function App() {
           onBack={() => setPage("mode")}
           onConfirm={(minionType) => {
             console.log("Selected Minion Type:", minionType)
-            alert("Minion Type " + minionType + " selected!")
+
+            // 🔥 ไปหน้า MinionSetup แทน alert
+            setPage("minionSetup")
           }}
         />
+      )}
+
+      {page === "minionSetup" && (
+        <div className="text-white text-3xl">
+          MINION SETUP PAGE (ยังไม่ได้สร้าง)
+        </div>
       )}
 
     </GameWrapper>

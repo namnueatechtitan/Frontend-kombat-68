@@ -1,5 +1,7 @@
 import { useState } from "react"
 
+import { setMinionTypeCount } from "../api/gameApi"
+
 // Components
 import ConfirmButton from "../components/ConfirmButton"
 import ArrowButton from "../components/ArrowButton"
@@ -50,6 +52,20 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
     const prev =
       (currentIndex - 1 + minionTypes.length) % minionTypes.length
     triggerChange(prev)
+  }
+
+  // ✅ ยิง backend ก่อน confirm
+  const handleConfirm = async () => {
+    try {
+      const selectedType = currentIndex + 1
+
+      await setMinionTypeCount(selectedType)
+
+      // ถ้าสำเร็จ ค่อยไปหน้าถัดไป
+      onConfirm(selectedType)
+    } catch (error) {
+      console.error("Failed to set minion type count", error)
+    }
   }
 
   return (
@@ -121,15 +137,11 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
           <ArrowButton
             direction="left"
             onClick={handlePrev}
-            className={`
+            className="
               absolute -left-28 md:-left-36
               transition-all duration-150
-              ${
-                activeArrow === "left"
-                  ? "scale-110 drop-shadow-[0_0_20px_rgba(255,0,0,0.9)] brightness-125"
-                  : "hover:scale-105"
-              }
-            `}
+              hover:scale-105
+            "
           />
 
           {/* Minion Image */}
@@ -166,15 +178,11 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
           <ArrowButton
             direction="right"
             onClick={handleNext}
-            className={`
+            className="
               absolute -right-28 md:-right-36
               transition-all duration-150
-              ${
-                activeArrow === "right"
-                  ? "scale-110 drop-shadow-[0_0_20px_rgba(255,0,0,0.9)] brightness-125"
-                  : "hover:scale-105"
-              }
-            `}
+              hover:scale-105
+            "
           />
         </div>
 
@@ -185,9 +193,7 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
 
         {/* Confirm */}
         <div className="mt-8">
-          <ConfirmButton
-            onClick={() => onConfirm(currentIndex + 1)}
-          />
+          <ConfirmButton onClick={handleConfirm} />
         </div>
       </div>
 
