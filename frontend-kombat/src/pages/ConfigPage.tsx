@@ -1,14 +1,61 @@
+import { useEffect, useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
 import ConfigBoard from "../components/ConfigBoard"
+import ArrowButton from "../components/ArrowButton"   
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
+import { getConfig, saveConfig } from "../api/gameApi"
 
 interface Props {
   onBack: () => void
   onConfirm: () => void
 }
 
+interface GameConfig {
+  spawnCost: number
+  hexPurchaseCost: number
+  initBudget: number
+  initHp: number
+  turnBudget: number
+  maxBudget: number
+  interestPct: number
+  maxTurns: number
+  maxSpawns: number
+}
+
 export default function ConfigPage({ onBack, onConfirm }: Props) {
+  const [config, setConfig] = useState<GameConfig | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    getConfig()
+      .then((data) => {
+        setConfig(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error("Failed to load config:", err)
+        setLoading(false)
+      })
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-white text-2xl">
+        Loading...
+      </div>
+    )
+  }
+
+  if (!config) {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-500 text-xl">
+        Failed to load config
+      </div>
+    )
+  }
+
   return (
     <div className="relative w-full h-full overflow-hidden">
 
@@ -20,10 +67,8 @@ export default function ConfigPage({ onBack, onConfirm }: Props) {
         draggable={false}
       />
 
-      {/* Dark overlay */}
-     <div className="absolute inset-0 bg-black/10 pointer-events-none" />
+      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
 
-      {/* Content */}
       <div className="relative z-10 w-full h-full flex flex-col items-center">
 
         {/* Logo */}
@@ -35,72 +80,96 @@ export default function ConfigPage({ onBack, onConfirm }: Props) {
         />
 
         {/* Title */}
-       <h1
-  className="
-    text-4xl md:text-5xl
-    font-extrabold
-    tracking-widest
-    bg-[radial-gradient(circle,#FFFFFF_0%,#FFB300_60%,#FFB300_100%)]
-    bg-clip-text
-    text-transparent
-    drop-shadow-[0_0_12px_rgba(255,179,0,0.6)]
-    mt-5 mb-1
-  "
->
-  CONFIG
-</h1>
+        <h1
+          className="
+            text-4xl md:text-5xl
+            font-extrabold
+            tracking-widest
+            bg-[radial-gradient(circle,#FFFFFF_0%,#FFB300_60%,#FFB300_100%)]
+            bg-clip-text
+            text-transparent
+            drop-shadow-[0_0_12px_rgba(255,179,0,0.6)]
+            mt-5 mb-4
+          "
+        >
+          CONFIG
+        </h1>
 
-        {/* Board */}
+        {/* Config Board */}
         <div className="w-[95%] max-w-[750px]">
           <ConfigBoard>
-            <div className="text-yellow-400 text-base md:text-xl space-y-2 font-medium">
-              <p>spawn_cost = 100</p>
-              <p>hex_purchase_cost = 1000</p>
-              <p>init_budget = 10000</p>
-              <p>init_hp = 100</p>
-              <p>turn_budget = 90</p>
-              <p>max_budget = 23456</p>
-              <p>interest_pct = 5</p>
-              <p>max_turns = 69</p>
-              <p>max_spawns = 47</p>
+            <div className="text-yellow-400 text-base md:text-xl space-y-3 font-medium">
+
+              {Object.entries(config).map(([key, value]) => (
+                <div key={key} className="flex justify-between items-center">
+                  <label className="capitalize">{key}</label>
+
+                  <input
+                    type="number"
+                    value={value}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        [key]: Number(e.target.value),
+                      } as GameConfig)
+                    }
+                    className="
+                      ml-4
+                      w-28
+                      text-right
+                      px-3 py-1.5
+                      rounded-md
+                      bg-black/60
+                      text-white
+                      border border-orange-500/70
+                      focus:outline-none
+                      focus:ring-2 focus:ring-orange-400
+                      focus:border-orange-300
+                      hover:shadow-[0_0_10px_rgba(255,140,0,0.7)]
+                      transition-all duration-200
+                      shadow-[0_0_6px_rgba(255,120,0,0.4)]
+                    "
+                  />
+                </div>
+              ))}
+
             </div>
           </ConfigBoard>
         </div>
 
         {/* Confirm Button */}
-        <div className="mt-10 mb-20">
-          <ConfirmButton onClick={onConfirm} />
+        <div className="mt-4 mb-10">
+          <ConfirmButton
+            onClick={async () => {
+              try {
+                setSaving(true)
+                await saveConfig(config)
+                alert("Config saved successfully!")
+                onConfirm()
+              } catch (err) {
+                console.error(err)
+                alert("Failed to save config")
+              } finally {
+                setSaving(false)
+              }
+            }}
+            disabled={saving}
+          />
         </div>
-
       </div>
 
-      {/* Back Button */}
-    <button
+      {/* Arrow Buttons */}
+<ArrowButton
+  direction="left"
   onClick={onBack}
-  className="absolute top-10 left-6 z-20"
->
-  <div className="
-    w-8 h-8
-    md:w-8 md:h-8
-    rounded-full
-    bg-[linear-gradient(90deg,#FF3D00,#ECDB46)]
-    flex items-center justify-center
-    shadow-md
-    hover:scale-105
-    transition-all duration-200
-  ">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-4 h-4 md:w-5 md:h-5 text-white"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={3}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-    </svg>
-  </div>
-</button>
+  className="top-10 left-6"
+/>
+
+<ArrowButton
+  direction="right"
+  onClick={onBack}
+  className="top-10 right-6"
+/>
 
     </div>
   )

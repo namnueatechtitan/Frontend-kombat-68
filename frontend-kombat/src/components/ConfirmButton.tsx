@@ -1,13 +1,15 @@
 interface Props {
   onClick?: () => void
+  disabled?: boolean   
 }
 
-export default function ConfirmButton({ onClick }: Props) {
+export default function ConfirmButton({ onClick, disabled }: Props) {
   return (
     <button
-      type="button"   // 👈 เพิ่มบรรทัดนี้
+      type="button"
       onClick={onClick}
-      className="
+      disabled={disabled}   
+      className={`
         mt-1
         w-[220px]
         h-[55px]
@@ -15,11 +17,14 @@ export default function ConfirmButton({ onClick }: Props) {
         text-white
         font-semibold
         text-lg
-        bg-gradient-to-r from-[#FF3D00] to-[#ECDB46]
-        hover:from-green-500 hover:to-green-500
         transition-all
         duration-300
-      "
+        ${
+          disabled
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-gradient-to-r from-[#FF3D00] to-[#ECDB46] hover:from-green-500 hover:to-green-500"
+        }
+      `}
     >
       Confirm
     </button>
