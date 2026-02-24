@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
 import ConfigBoard from "../components/ConfigBoard"
-import ArrowButton from "../components/ArrowButton"   
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
 import { getConfig, saveConfig } from "../api/gameApi"
@@ -23,7 +22,7 @@ interface GameConfig {
   maxSpawns: number
 }
 
-export default function ConfigPage({ onBack, onConfirm }: Props) {
+export default function ConfigPage({  onConfirm }: Props) {
   const [config, setConfig] = useState<GameConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

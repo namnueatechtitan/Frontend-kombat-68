@@ -1,6 +1,5 @@
 import { useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
-import ArrowButton from "../components/ArrowButton"
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
 
@@ -15,7 +14,7 @@ interface Props {
 
 type ModeType = "DUEL" | "SOLITAIRE" | "AUTO"
 
-export default function ModePage({ onBack, onConfirm }: Props) {
+export default function ModePage({ onConfirm }: Props) {
   const [selectedMode, setSelectedMode] = useState<ModeType | null>(null)
 
   const modes = [

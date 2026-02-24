@@ -21,11 +21,10 @@ interface Props {
   onConfirm: (minionType: number) => void
 }
 
-export default function MinionTypePage({ onBack, onConfirm }: Props) {
+export default function MinionTypePage({ onConfirm }: Props) {
   const minionTypes = [type1, type2, type3, type4, type5]
 
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [activeArrow, setActiveArrow] =
     useState<"left" | "right" | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
   const [shake, setShake] = useState(false)

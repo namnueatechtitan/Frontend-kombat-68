@@ -2,7 +2,6 @@ import { useState } from "react"
 
 // Components
 import ConfirmButton from "../components/ConfirmButton"
-import ArrowButton from "../components/ArrowButton"
 
 // API
 import { setCharacter } from "../api/gameApi"
@@ -18,7 +17,7 @@ interface Props {
   onConfirm: (uiType: "HUMAN" | "DEMON") => void
 }
 
-export default function SelectCharacterPage({ onBack, onConfirm }: Props) {
+export default function SelectCharacterPage({ onConfirm }: Props) {
   const [selected, setSelected] = useState<"HUMAN" | "DEMON" | null>(null)
   const [shake, setShake] = useState(false)
   const [loading, setLoading] = useState(false)

@@ -8,6 +8,7 @@ import ConfigPage from "./pages/ConfigPage"
 import ModePage from "./pages/ModePage"
 import MinionTypePage from "./pages/MinionTypePage"
 import SelectCharacterPage from "./pages/SelectCharacterPage"
+import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
 
 import { setMode } from "./api/gameApi"
 
@@ -19,6 +20,7 @@ function App() {
     | "minionType"
     | "selectUI"
     | "minionSetup"
+    | "strategy"
   >("start")
 
   // -------------------- MODE --------------------
@@ -52,6 +54,9 @@ function App() {
         break
       case "minionSetup":
         setPage("selectUI")
+        break
+      case "strategy":
+        setPage("minionSetup")
         break
     }
   }
@@ -110,10 +115,16 @@ function App() {
 
       {/* -------------------- MINION SETUP -------------------- */}
       {page === "minionSetup" && (
-        <div className="text-white text-3xl">
-          MINION SETUP PAGE (ยังไม่ได้สร้าง)
-        </div>
+        <SelectMinionHumanPage
+          onBack={handleBack}
+          onConfirm={(minion) => {
+            console.log("Selected Minion:", minion)
+            setPage("strategy")
+          }}
+        />
       )}
+
+   
     </GameWrapper>
   )
 }

@@ -1,3 +1,19 @@
+export async function addMinion(type: string) {
+  const res = await fetch("http://localhost:8080/api/game/minion", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ type }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text)
+  }
+
+  return res.json()
+}
 export const setCharacter = async (
   character: "HUMAN" | "DEMON"
 ) => {
