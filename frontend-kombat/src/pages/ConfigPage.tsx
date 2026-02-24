@@ -157,20 +157,6 @@ export default function ConfigPage({ onBack, onConfirm }: Props) {
           />
         </div>
       </div>
-
-      {/* Arrow Buttons */}
-<ArrowButton
-  direction="left"
-  onClick={onBack}
-  className="top-10 left-6"
-/>
-
-<ArrowButton
-  direction="right"
-  onClick={onBack}
-  className="top-10 right-6"
-/>
-
     </div>
   )
 }

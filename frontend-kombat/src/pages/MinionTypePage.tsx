@@ -196,13 +196,6 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
           <ConfirmButton onClick={handleConfirm} />
         </div>
       </div>
-
-      {/* Back Button */}
-      <ArrowButton
-        direction="left"
-        onClick={onBack}
-        className="absolute top-10 left-6 hover:scale-105 transition-all"
-      />
     </div>
   )
 }

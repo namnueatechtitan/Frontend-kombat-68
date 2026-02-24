@@ -5,9 +5,10 @@ const BASE_HEIGHT = 1024
 
 interface Props {
   children: React.ReactNode
+  overlay?: React.ReactNode
 }
 
-export default function GameWrapper({ children }: Props) {
+export default function GameWrapper({ children, overlay }: Props) {
   const [scale, setScale] = useState(1)
 
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function GameWrapper({ children }: Props) {
       const scaleX = window.innerWidth / BASE_WIDTH
       const scaleY = window.innerHeight / BASE_HEIGHT
 
-      // ใช้ min ถ้าต้องการ fit จอแบบไม่ครอป
+      // ใช้ Math.max เพื่อให้เต็มจอแบบ cover
       setScale(Math.max(scaleX, scaleY))
     }
 
@@ -26,6 +27,8 @@ export default function GameWrapper({ children }: Props) {
 
   return (
     <div className="w-screen h-screen overflow-hidden bg-black relative">
+
+      {/* 🎮 Game Layer (โดน scale) */}
       <div
         style={{
           width: BASE_WIDTH,
@@ -39,6 +42,13 @@ export default function GameWrapper({ children }: Props) {
       >
         {children}
       </div>
+
+      {/* 🧭 UI Overlay Layer (ไม่โดน scale) */}
+      {overlay && (
+        <div className="absolute inset-0 pointer-events-none">
+          {overlay}
+        </div>
+      )}
     </div>
   )
 }

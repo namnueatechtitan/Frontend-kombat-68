@@ -135,24 +135,6 @@ export default function ModePage({ onBack, onConfirm }: Props) {
 
       </div>
 
-      {/* Arrow Buttons */}
-      <ArrowButton
-        direction="left"
-        onClick={onBack}
-        className="top-10 left-6"
-      />
-
-      <ArrowButton
-        direction="right"
-        onClick={() => {
-          if (!selectedMode) {
-            alert("Please select a mode first.")
-            return
-          }
-          onConfirm(selectedMode)
-        }}
-        className="top-10 right-6"
-      />
 
     </div>
   )

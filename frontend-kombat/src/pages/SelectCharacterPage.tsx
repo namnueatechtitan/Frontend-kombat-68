@@ -201,13 +201,6 @@ export default function SelectCharacterPage({ onBack, onConfirm }: Props) {
           />
         </div>
       </div>
-
-      {/* Back Button */}
-      <ArrowButton
-        direction="left"
-        onClick={onBack}
-        className="absolute top-10 left-6 hover:scale-105 transition-all"
-      />
     </div>
   )
 }

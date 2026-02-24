@@ -12,7 +12,10 @@ export default function ArrowButton({
   const isLeft = direction === "left"
 
   return (
-    <button onClick={onClick} className={`absolute z-20 ${className}`}>
+    <button
+      onClick={onClick}
+      className={`fixed z-50 ${className}`}
+    >
       <div
         className="
           w-10 h-10
@@ -35,9 +38,17 @@ export default function ArrowButton({
           strokeWidth={3}
         >
           {isLeft ? (
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
           ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
           )}
         </svg>
       </div>
