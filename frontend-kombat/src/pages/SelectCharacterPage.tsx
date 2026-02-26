@@ -199,7 +199,7 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
             disabled={!selected || loading}
           />
         </div>
-      </div>h
+      </div>
     </div>
   )
 }

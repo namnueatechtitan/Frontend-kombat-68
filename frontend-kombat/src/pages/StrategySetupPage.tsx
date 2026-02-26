@@ -1,11 +1,12 @@
 import { useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
+import type { MinionData } from "./SelectMinionHumanPage"
 
-import bg from "../assets/images/background-config.png"
+import bg from "../assets/images/Minion setup.png"
 import logo from "../assets/images/logo.png"
-import boardStrategy from "../assets/images/boardstrategy.png"
 
 interface Props {
+  minion: MinionData
   onBack: () => void
   onConfirm: (code: string, defenFactor: number) => void
 }
@@ -13,6 +14,7 @@ interface Props {
 type TemplateType = "AGGRESSIVE" | "DEFENSIVE" | "RANDOM"
 
 export default function StrategySetupPage({
+  minion,
   onBack,
   onConfirm,
 }: Props) {
@@ -45,152 +47,247 @@ done`,
   }
 
   return (
-    <div className="relative w-full min-h-screen">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-start">
 
-      {/* Background */}
+      {/* BACKGROUND */}
       <img
         src={bg}
         alt="background"
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover"
         draggable={false}
       />
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/60" />
 
-      <div className="relative z-10 w-full h-full">
+      {/* HEADER */}
+      <div className="relative z-10 mt-10 flex flex-col items-center">
+        <img
+          src={logo}
+          alt="logo"
+          className="w-[110px] mb-4"
+          draggable={false}
+        />
 
-        {/* ===== HEADER แบบเดียวกับ SelectMinion ===== */}
-        <div className="pt-10 flex justify-center">
-          <div className="flex items-center gap-6">
-            <img src={logo} alt="logo" className="w-[90px]" draggable={false} />
-            <h1 className="text-5xl font-extrabold tracking-wide bg-[linear-gradient(90deg,#FFD54F,#FF9800)] bg-clip-text text-transparent">
-              Editing Minion
-            </h1>
-          </div>
+        <h1 className="
+          text-5xl font-extrabold tracking-wide
+          bg-gradient-to-r from-[#f6d27a] to-[#c6932f]
+          bg-clip-text text-transparent
+        ">
+          Select Minion
+        </h1>
+      </div>
+
+      {/* FRAME */}
+      <div
+        className="
+        relative z-10
+        mt-12
+        w-[1200px]
+        h-[600px]
+        rounded-xl
+        bg-gradient-to-b
+        from-[#4a2c18]
+        via-[#2e1a0f]
+        to-[#160c06]
+        border border-[#c6932f]
+        overflow-hidden
+        "
+      >
+        {/* TOP BAR */}
+        <div
+          className="
+          h-[50px]
+          flex items-center justify-center
+          text-[#f6d27a]
+          text-2xl tracking-[0.4em]
+          border-b border-[#c6932f]
+          bg-gradient-to-r
+          from-[#6a3f1f]
+          via-[#8b5a2b]
+          to-[#6a3f1f]
+        "
+        >
+          EDITING {minion.name.toUpperCase()} (TYPE 1)
         </div>
 
-        {/* ===== BOARD WRAPPER ===== */}
-        <div className="flex justify-center mt-6">
-          <div className="relative w-[80%] max-w-[1400px]">
+        {/* CONTENT */}
+        <div className="flex h-[calc(100%-50px)]">
 
+          {/* LEFT PANEL */}
+          <div className="w-[30%] relative p-10 text-[#f1d8a5]">
+
+            <div className="absolute right-0 top-0 bottom-0 w-[2px]
+              bg-gradient-to-b from-transparent via-[#c6932f] to-transparent" />
+
+            <div className="text-lg tracking-widest mb-6 text-[#e6c27a]">
+              SELECTED MINION
+            </div>
+
+            {/* 🔥 แสดงรูปจาก minion */}
             <img
-              src={boardStrategy}
-              alt="board"
-              className="w-full h-auto select-none pointer-events-none"
+              src={minion.preview}
+              alt={minion.name}
+              className="
+                w-[240px]
+                h-[260px]
+                object-contain
+                border border-[#c6932f]
+                rounded-lg
+                mb-8
+              "
               draggable={false}
             />
 
-            {/* ===== CONTENT OVER BOARD ===== */}
-            <div className="absolute inset-0 flex">
-
-              {/* LEFT PANEL */}
-              <div className="w-[28%] border-r border-yellow-700 flex flex-col items-center pt-16 text-white">
-
-                <h2 className="text-lg tracking-widest mb-6">
-                  Selected Minion
-                </h2>
-
-                <div className="w-[200px] h-[240px] bg-black/30 rounded-xl mb-6 shadow-inner" />
-
-                <button
-                  onClick={() =>
-                    setDefenFactor((prev) =>
-                      prev === 5 ? 1 : prev + 1
+            {/* DEFENSE */}
+            <div
+              className="
+                flex items-center justify-between
+                w-[240px] px-6 py-3
+                rounded-full
+                bg-[#29795F]
+                text-white
+                text-lg tracking-[0.15em]
+              "
+            >
+              <span className="flex items-center">
+                Defense =
+                <input
+                  type="number"
+                  min={1}
+                  max={1000}
+                  value={defenFactor}
+                  onChange={(e) =>
+                    setDefenFactor(
+                      Math.max(1, Math.min(1000, Number(e.target.value) || 1))
                     )
                   }
-                  className="px-8 py-2 rounded-full bg-green-600 hover:bg-green-700 shadow-lg"
-                >
-                  Defense = {defenFactor}
-                </button>
-              </div>
-
-              {/* CENTER PANEL */}
-              <div className="w-[44%] border-r border-yellow-700 px-10 pt-16 flex flex-col">
-
-                <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Write your strategy here..."
                   className="
-                    flex-1
-                    bg-[#3a2417]
-                    border-2 border-yellow-600
-                    rounded-lg
-                    p-6
+                    w-10 ml-3
+                    bg-transparent
+                    outline-none
                     text-white
-                    resize-none
-                    focus:outline-none
+                    text-center
                   "
                 />
+              </span>
+
+              <div className="
+                w-5 h-5
+                rounded-full
+                bg-[#E6C27A]
+                flex items-center justify-center
+                text-[#29795F]
+                text-lg
+              ">
+                ▶
               </div>
-
-              {/* RIGHT PANEL */}
-              <div className="w-[28%] pl-10 pt-16 text-white">
-
-                <h2 className="text-lg tracking-widest text-center mb-8">
-                  QUICK TEMPLATES
-                </h2>
-
-                {(["AGGRESSIVE", "DEFENSIVE", "RANDOM"] as TemplateType[]).map(
-                  (type) => (
-                    <button
-                      key={type}
-                      onClick={() => handleTemplateClick(type)}
-                      className={`
-                        flex justify-between items-center
-                        w-full px-6 py-3
-                        rounded-full mb-6 shadow-lg transition-all
-                        ${
-                          type === "AGGRESSIVE"
-                            ? "bg-red-600"
-                            : type === "DEFENSIVE"
-                            ? "bg-blue-600"
-                            : "bg-green-600"
-                        }
-                        ${
-                          selectedTemplate === type
-                            ? "ring-2 ring-yellow-400 scale-105"
-                            : "hover:scale-105"
-                        }
-                      `}
-                    >
-                      <span>{type}</span>
-                      <span className="bg-yellow-300 text-black w-8 h-8 flex items-center justify-center rounded-full">
-                        ▶
-                      </span>
-                    </button>
-                  )
-                )}
-
-                <div className="mt-4 text-sm opacity-80">
-                  <p>- move &lt;direction&gt;</p>
-                  <p>- shoot &lt;direction&gt; &lt;cost&gt;</p>
-                  <p>- if / else</p>
-                  <p>- while</p>
-                  <p>- done</p>
-                </div>
-              </div>
-
             </div>
+
+          </div>
+
+          {/* CENTER PANEL */}
+          <div className="w-[40%] relative p-10">
+            <div className="absolute right-0 top-0 bottom-0 w-[2px]
+              bg-gradient-to-b from-transparent via-[#c6932f] to-transparent" />
+
+            <textarea
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Write your strategy here..."
+              className="
+                w-full h-full
+                bg-[#2a170d]
+                border border-[#c6932f]
+                rounded-lg
+                p-6
+                text-[#f6e6c4]
+                font-mono
+                leading-7
+                resize-none
+                focus:outline-none
+                caret-[#c6932f]
+              "
+            />
+          </div>
+
+          {/* RIGHT PANEL */}
+          <div className="w-[30%] p-10 text-[#f1d8a5] relative">
+
+            <div className="text-lg tracking-widest mb-8 text-[#e6c27a]">
+              QUICK TEMPLATES
+            </div>
+
+            {(["AGGRESSIVE", "DEFENSIVE", "RANDOM"] as TemplateType[]).map(
+              (type) => {
+                const colorMap = {
+                  AGGRESSIVE: "from-[#5a0f0f] to-[#a31515]",
+                  DEFENSIVE: "from-[#0f2a5a] to-[#1e40af]",
+                  RANDOM: "from-[#043d2c] to-[#0f9f6e]",
+                }
+
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handleTemplateClick(type)}
+                    className={`
+                      w-full mb-6 px-6 py-3
+                      rounded-full text-[#f6e6c4]
+                      flex justify-between items-center
+                      bg-gradient-to-r ${colorMap[type]}
+                      ${selectedTemplate === type ? "ring-2 ring-[#c6932f]" : ""}
+                    `}
+                  >
+                    <span>{type}</span>
+                    <span className="
+                      w-8 h-8 rounded-full
+                      bg-[#d4a846]
+                      text-black flex items-center justify-center
+                    ">
+                      ▶
+                    </span>
+                  </button>
+                )
+              }
+            )}
+
+            <div className="
+              my-8 h-[2px]
+              bg-gradient-to-r from-transparent via-[#c6932f] to-transparent
+            " />
+
+            <div className="text-sm text-[#cbb07a] leading-7">
+              <p>- move &lt;direction&gt;</p>
+              <p>- shoot &lt;direction&gt; &lt;cost&gt;</p>
+              <p>- if / else</p>
+              <p>- while</p>
+              <p>- done</p>
+            </div>
+
           </div>
         </div>
       </div>
 
-      {/* ===== FOOTER BUTTONS (เหมือนหน้า SelectMinion) ===== */}
-      <div className="fixed bottom-10 left-0 right-0 z-50 flex justify-center gap-16 pointer-events-none">
-        <div className="flex gap-16 pointer-events-auto">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-16 py-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-semibold tracking-wide"
-          >
-            Back
-          </button>
+      {/* FOOTER */}
+      <div className="relative z-10 flex gap-20 mt-10 mb-16">
+        <button
+          onClick={onBack}
+          className="
+            px-16 py-3
+            rounded-full
+            bg-gradient-to-r
+            from-[#1e3a8a]
+            to-[#2563eb]
+            text-white
+          "
+        >
+          Back
+        </button>
 
-          <ConfirmButton
-            onClick={() => onConfirm(code, defenFactor)}
-          />
-        </div>
+        <ConfirmButton
+          onClick={() => onConfirm(code, defenFactor)}
+          disabled={!code.trim()}
+        />
       </div>
+
     </div>
   )
 }

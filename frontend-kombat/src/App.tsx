@@ -8,7 +8,9 @@ import ConfigPage from "./pages/ConfigPage"
 import ModePage from "./pages/ModePage"
 import MinionTypePage from "./pages/MinionTypePage"
 import SelectCharacterPage from "./pages/SelectCharacterPage"
-import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
+import SelectMinionHumanPage, {
+  type MinionData,
+} from "./pages/SelectMinionHumanPage"
 import StrategySetupPage from "./pages/StrategySetupPage"
 
 import { setMode } from "./api/gameApi"
@@ -23,6 +25,10 @@ function App() {
     | "minionSetup"
     | "strategy"
   >("start")
+
+  // 🔥 เก็บ minion ที่เลือกไว้ตรงกลาง App
+  const [selectedMinion, setSelectedMinion] =
+    useState<MinionData | null>(null)
 
   // -------------------- MODE --------------------
   const handleModeConfirm = async (
@@ -120,25 +126,26 @@ function App() {
           onBack={handleBack}
           onConfirm={(minion) => {
             console.log("Selected Minion:", minion)
+            setSelectedMinion(minion) // 🔥 เก็บไว้
             setPage("strategy")
           }}
         />
       )}
 
-     {/* -------------------- STRATEGY PAGE -------------------- */}
-{page === "strategy" && (
-  <StrategySetupPage
-    onBack={handleBack}
-    onConfirm={(code, defenFactor) => {
-      console.log("Strategy Code:", code)
-      console.log("Defense:", defenFactor)
+      {/* -------------------- STRATEGY PAGE -------------------- */}
+      {page === "strategy" && selectedMinion && (
+        <StrategySetupPage
+          minion={selectedMinion} // 🔥 ส่งไปหน้า Strategy
+          onBack={handleBack}
+          onConfirm={(code, defenFactor) => {
+            console.log("Strategy Code:", code)
+            console.log("Defense:", defenFactor)
 
-      // ตอนนี้ยังไม่ต่อ API
-      // แค่ย้อนกลับไปหน้า minionSetup ชั่วคราว
-      setPage("minionSetup")
-    }}
-  />
-)}
+            // ตอนนี้ยังไม่ยิง API
+            setPage("minionSetup")
+          }}
+        />
+      )}
     </GameWrapper>
   )
 }

@@ -1,9 +1,8 @@
 import { useState } from "react"
-import ConfirmButton from "../components/ConfirmButton"
+import ConfirmButton from "../components/ConfirmButton"   // ✅ เพิ่ม
 
-import bg from "../assets/images/background-config.png"
+import bg from "../assets/images/Minion setup.png"
 import logo from "../assets/images/logo.png"
-import boardStrategy from "../assets/images/boardstrategy.png"
 
 interface Props {
   onBack: () => void
@@ -45,152 +44,209 @@ done`,
   }
 
   return (
-    <div className="relative w-full min-h-screen">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-start">
 
-      {/* Background */}
       <img
         src={bg}
         alt="background"
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+        className="absolute inset-0 w-full h-full object-cover"
         draggable={false}
       />
-      <div className="absolute inset-0 bg-black/40" />
+      <div className="absolute inset-0 bg-black/60" />
 
-      <div className="relative z-10 w-full h-full">
+      <div className="relative z-10 mt-10 flex flex-col items-center">
 
-        {/* ===== HEADER แบบเดียวกับ SelectMinion ===== */}
-        <div className="pt-10 flex justify-center">
-          <div className="flex items-center gap-6">
-            <img src={logo} alt="logo" className="w-[90px]" draggable={false} />
-            <h1 className="text-5xl font-extrabold tracking-wide bg-[linear-gradient(90deg,#FFD54F,#FF9800)] bg-clip-text text-transparent">
-              Editing Minion
-            </h1>
-          </div>
+        <img
+          src={logo}
+          alt="logo"
+          className="w-[110px] mb-4 drop-shadow-[0_0_20px_rgba(255,200,80,0.5)]"
+          draggable={false}
+        />
+
+        <h1 className="
+          text-5xl font-extrabold tracking-wide
+          bg-gradient-to-r from-[#FFD54F] to-[#FF9800]
+          bg-clip-text text-transparent
+        ">
+          Select Minion
+        </h1>
+      </div>
+
+      {/* ================= GOLD FRAME ================= */}
+      <div
+        className="
+        relative z-10
+        mt-12
+        w-[1200px]
+        h-[600px]
+        rounded-xl
+        bg-gradient-to-b
+        from-[#4b2a14]
+        via-[#3a1f10]
+        to-[#2a160b]
+        border border-[#e0b15c]
+        shadow-[0_0_80px_rgba(255,170,60,0.3)]
+        overflow-hidden
+        "
+      >
+        <div
+          className="
+          pointer-events-none
+          absolute inset-0
+          rounded-xl
+          shadow-[inset_0_0_60px_rgba(255,180,80,0.25)]
+        "
+        />
+
+        <div
+          className="
+          h-[50px]
+          flex items-center justify-center
+          text-[#ffe0a3]
+          text-2xl tracking-[0.4em]
+          border-b border-[#e0b15c]
+          bg-gradient-to-r
+          from-[#5a3219]
+          via-[#6b3a1c]
+          to-[#5a3219]
+        "
+        >
+          EDITING FIGHTER (TYPE 1)
         </div>
 
-        {/* ===== BOARD WRAPPER ===== */}
-        <div className="flex justify-center mt-6">
-          <div className="relative w-[80%] max-w-[1400px]">
+        <div className="flex h-[calc(100%-90px)]">
 
-            <img
-              src={boardStrategy}
-              alt="board"
-              className="w-full h-auto select-none pointer-events-none"
-              draggable={false}
-            />
+          {/* LEFT */}
+          <div className="w-[30%] relative p-10 text-[#ffe0a3]">
 
-            {/* ===== CONTENT OVER BOARD ===== */}
-            <div className="absolute inset-0 flex">
+            <div className="absolute right-0 top-0 bottom-0 w-[2px]
+              bg-gradient-to-b from-transparent via-[#e0b15c] to-transparent" />
 
-              {/* LEFT PANEL */}
-              <div className="w-[28%] border-r border-yellow-700 flex flex-col items-center pt-16 text-white">
-
-                <h2 className="text-lg tracking-widest mb-6">
-                  Selected Minion
-                </h2>
-
-                <div className="w-[200px] h-[240px] bg-black/30 rounded-xl mb-6 shadow-inner" />
-
-                <button
-                  onClick={() =>
-                    setDefenFactor((prev) =>
-                      prev === 5 ? 1 : prev + 1
-                    )
-                  }
-                  className="px-8 py-2 rounded-full bg-green-600 hover:bg-green-700 shadow-lg"
-                >
-                  Defense = {defenFactor}
-                </button>
-              </div>
-
-              {/* CENTER PANEL */}
-              <div className="w-[44%] border-r border-yellow-700 px-10 pt-16 flex flex-col">
-
-                <textarea
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Write your strategy here..."
-                  className="
-                    flex-1
-                    bg-[#3a2417]
-                    border-2 border-yellow-600
-                    rounded-lg
-                    p-6
-                    text-white
-                    resize-none
-                    focus:outline-none
-                  "
-                />
-              </div>
-
-              {/* RIGHT PANEL */}
-              <div className="w-[28%] pl-10 pt-16 text-white">
-
-                <h2 className="text-lg tracking-widest text-center mb-8">
-                  QUICK TEMPLATES
-                </h2>
-
-                {(["AGGRESSIVE", "DEFENSIVE", "RANDOM"] as TemplateType[]).map(
-                  (type) => (
-                    <button
-                      key={type}
-                      onClick={() => handleTemplateClick(type)}
-                      className={`
-                        flex justify-between items-center
-                        w-full px-6 py-3
-                        rounded-full mb-6 shadow-lg transition-all
-                        ${
-                          type === "AGGRESSIVE"
-                            ? "bg-red-600"
-                            : type === "DEFENSIVE"
-                            ? "bg-blue-600"
-                            : "bg-green-600"
-                        }
-                        ${
-                          selectedTemplate === type
-                            ? "ring-2 ring-yellow-400 scale-105"
-                            : "hover:scale-105"
-                        }
-                      `}
-                    >
-                      <span>{type}</span>
-                      <span className="bg-yellow-300 text-black w-8 h-8 flex items-center justify-center rounded-full">
-                        ▶
-                      </span>
-                    </button>
-                  )
-                )}
-
-                <div className="mt-4 text-sm opacity-80">
-                  <p>- move &lt;direction&gt;</p>
-                  <p>- shoot &lt;direction&gt; &lt;cost&gt;</p>
-                  <p>- if / else</p>
-                  <p>- while</p>
-                  <p>- done</p>
-                </div>
-              </div>
-
+            <div className="text-lg tracking-widest mb-6">
+              SELECTED MINION
             </div>
+
+            <div className="
+              w-[240px]
+              h-[260px]
+              bg-[#2a160b]
+              border border-[#e0b15c]
+              rounded-lg
+              shadow-[inset_0_0_40px_rgba(0,0,0,0.8)]
+              mb-8
+            " />
+
+            <button
+              onClick={() =>
+                setDefenFactor(prev => (prev === 5 ? 1 : prev + 1))
+              }
+              className="
+                px-8 py-2 rounded-full
+                bg-gradient-to-r
+                from-[#0f766e]
+                to-[#10b981]
+                text-white
+                shadow-[0_5px_20px_rgba(0,0,0,0.7)]
+              "
+            >
+              Defense = {defenFactor}
+            </button>
+          </div>
+
+          {/* CENTER */}
+          <div className="w-[40%] relative p-10">
+
+            <div className="absolute right-0 top-0 bottom-0 w-[2px]
+              bg-gradient-to-b from-transparent via-[#e0b15c] to-transparent" />
+
+            <textarea
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Write your strategy here..."
+              className="
+                w-full h-full
+                bg-[#2b1a0f]
+                border border-[#e0b15c]
+                rounded-lg
+                p-6
+                text-[#ffe0a3]
+                resize-none
+                shadow-[inset_0_0_30px_rgba(0,0,0,0.8)]
+                focus:outline-none
+              "
+            />
+          </div>
+
+          {/* RIGHT */}
+          <div className="w-[30%] p-10 text-[#ffe0a3] relative">
+
+            <div className="text-lg tracking-widest mb-8">
+              QUICK TEMPLATES
+            </div>
+
+            {(["AGGRESSIVE", "DEFENSIVE", "RANDOM"] as TemplateType[]).map(
+              (type) => {
+                const colorMap = {
+                  AGGRESSIVE: "from-[#7a1414] to-[#b91c1c]",
+                  DEFENSIVE: "from-[#1e3a8a] to-[#2563eb]",
+                  RANDOM: "from-[#065f46] to-[#10b981]",
+                }
+
+                return (
+                  <button
+                    key={type}
+                    onClick={() => handleTemplateClick(type)}
+                    className={`
+                      w-full mb-6 px-6 py-3
+                      rounded-full text-white
+                      flex justify-between items-center
+                      bg-gradient-to-r ${colorMap[type]}
+                      shadow-[0_6px_20px_rgba(0,0,0,0.8)]
+                      transition
+                      ${selectedTemplate === type ? "ring-2 ring-[#ffd27a]" : ""}
+                    `}
+                  >
+                    <span>{type}</span>
+                    <span className="
+                      w-8 h-8 rounded-full
+                      bg-[#ffe0a3]
+                      text-black flex items-center justify-center
+                    ">
+                      ▶
+                    </span>
+                  </button>
+                )
+              }
+            )}
           </div>
         </div>
       </div>
 
-      {/* ===== FOOTER BUTTONS (เหมือนหน้า SelectMinion) ===== */}
-      <div className="fixed bottom-10 left-0 right-0 z-50 flex justify-center gap-16 pointer-events-none">
-        <div className="flex gap-16 pointer-events-auto">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-16 py-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-semibold tracking-wide"
-          >
-            Back
-          </button>
+      {/* FOOTER */}
+      <div className="relative z-10 flex gap-20 mt-10 mb-16">
 
-          <ConfirmButton
-            onClick={() => onConfirm(code, defenFactor)}
-          />
-        </div>
+        <button
+          onClick={onBack}
+          className="
+            px-16 py-3 rounded-full
+            bg-gradient-to-r
+            from-[#3b82f6]
+            to-[#60a5fa]
+            text-white
+            shadow-[0_5px_20px_rgba(0,0,0,0.7)]
+          "
+        >
+          Back
+        </button>
+
+        {/* ✅ ใช้ ConfirmButton component ตามที่สั่ง */}
+        <ConfirmButton
+          onClick={() => onConfirm(code, defenFactor)}
+          disabled={!code.trim()}
+        />
+
       </div>
+
     </div>
   )
 }
