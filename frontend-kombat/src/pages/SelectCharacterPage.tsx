@@ -32,23 +32,27 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
   }
 
   const handleConfirm = async () => {
-    if (!selected || loading) return
+  if (!selected || loading) return
 
+  try {
+    setLoading(true)
+
+    // ยิง backend แต่ถ้าพังไม่ให้บล็อคหน้า
     try {
-      setLoading(true)
-
-      // 🔥 ยิง API ไป backend
       await setCharacter(selected)
-
-      // ไปหน้าถัดไป
-      onConfirm(selected)
-    } catch (err) {
-      console.error(err)
-      alert("Failed to select UI")
-    } finally {
-      setLoading(false)
+    } catch (apiError) {
+      console.warn("Backend error but continue UI:", apiError)
     }
+
+    // 🔥 ไปหน้าถัดไปเสมอ
+    onConfirm(selected)
+
+  } catch (err) {
+    console.error(err)
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div

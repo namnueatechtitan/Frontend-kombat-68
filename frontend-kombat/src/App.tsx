@@ -8,11 +8,16 @@ import ConfigPage from "./pages/ConfigPage"
 import ModePage from "./pages/ModePage"
 import MinionTypePage from "./pages/MinionTypePage"
 import SelectCharacterPage from "./pages/SelectCharacterPage"
-import StrategySetupPage from "./pages/StrategySetupPage"
+
+import StrategySetupHumanPage from "./pages/StrategySetupHumanPage"
+import StrategySetupDemonPage from "./pages/StrategySetupDemonPage"
+
 import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
+import SelectMinionDemonPage from "./pages/SelectMinionDemonPage"
+import PreBattlePage from "./pages/PreBattleSummaryPage"
 
 import type { MinionData, MinionType } from "./types/MinionData"
-import { setMode, startGame } from "./api/gameApi"
+import { setMode } from "./api/gameApi"
 
 interface ConfiguredMinion extends MinionData {
   strategy: string
@@ -26,10 +31,15 @@ function App() {
     | "mode"
     | "minionType"
     | "selectUI"
-    | "minionSetup"
+    | "minionSetupHuman"
+    | "minionSetupDemon"
     | "strategy"
     | "preBattle"
+    | "game"
   >("start")
+
+  const [currentFaction, setCurrentFaction] =
+    useState<"HUMAN" | "DEMON" | null>(null)
 
   const [selectedMinion, setSelectedMinion] =
     useState<ConfiguredMinion | null>(null)
@@ -39,7 +49,6 @@ function App() {
 
   const [minions, setMinions] = useState<ConfiguredMinion[]>([])
 
-  // -------------------- MODE --------------------
   const handleModeConfirm = async (
     mode: "DUEL" | "SOLITAIRE" | "AUTO"
   ) => {
@@ -52,16 +61,12 @@ function App() {
     }
   }
 
-  // -------------------- REMOVE --------------------
   const handleRemove = (type: MinionType) => {
     setMinions(prev => prev.filter(m => m.type !== type))
   }
 
-  // -------------------- FINAL CONFIRM --------------------
   const handleFinalConfirm = async () => {
     try {
-
-      // 🔥 ป้องกันกด confirm ทั้งที่ยังไม่ครบ
       if (minions.length !== minionTypeCount) {
         alert("Please configure all minions first")
         return
@@ -84,16 +89,13 @@ function App() {
         throw new Error(text || "Setup failed")
       }
 
-      await startGame()
       setPage("preBattle")
-
     } catch (err) {
       console.error(err)
-      alert("Failed to start game")
+      alert("Failed to complete setup")
     }
   }
 
-  // -------------------- BACK --------------------
   const handleBack = () => {
     switch (page) {
       case "config":
@@ -106,14 +108,26 @@ function App() {
       case "selectUI":
         setPage("minionType")
         break
-      case "minionSetup":
+      case "minionSetupHuman":
+      case "minionSetupDemon":
         setPage("selectUI")
         break
       case "strategy":
-        setPage("minionSetup")
+        if (currentFaction === "DEMON") {
+          setPage("minionSetupDemon")
+        } else {
+          setPage("minionSetupHuman")
+        }
         break
       case "preBattle":
-        setPage("minionSetup")
+        if (currentFaction === "DEMON") {
+          setPage("minionSetupDemon")
+        } else {
+          setPage("minionSetupHuman")
+        }
+        break
+      case "game":
+        setPage("preBattle")
         break
     }
   }
@@ -121,7 +135,7 @@ function App() {
   return (
     <GameWrapper
       overlay={
-        page !== "start" && (
+        page !== "start" && page !== "game" && (
           <ArrowButton
             direction="left"
             onClick={handleBack}
@@ -154,7 +168,7 @@ function App() {
       {page === "minionType" && (
         <MinionTypePage
           onBack={handleBack}
-          onConfirm={(count: number) => {
+          onConfirm={(count) => {
             setMinionTypeCount(count)
             setMinions([])
             setSelectedMinion(null)
@@ -166,28 +180,46 @@ function App() {
       {page === "selectUI" && (
         <SelectCharacterPage
           onBack={handleBack}
-          onConfirm={() => setPage("minionSetup")}
+          onConfirm={(uiType) => {
+            setCurrentFaction(uiType)
+            setPage(
+              uiType === "DEMON"
+                ? "minionSetupDemon"
+                : "minionSetupHuman"
+            )
+          }}
         />
       )}
 
-      {page === "minionSetup" && (
+      {page === "minionSetupHuman" && (
         <SelectMinionHumanPage
           minionTypeCount={minionTypeCount}
           minions={minions}
           onBack={handleBack}
           onSelect={(minion) => {
-            const existing = minions.find(m => m.type === minion.type)
+            setSelectedMinion({
+              ...minion,
+              strategy: "",
+              defenseFactor: 1,
+            })
+            setPage("strategy")
+          }}
+          onRemove={handleRemove}
+          onNext={handleFinalConfirm}
+        />
+      )}
 
-            if (existing) {
-              setSelectedMinion(existing)
-            } else {
-              setSelectedMinion({
-                ...minion,
-                strategy: "",
-                defenseFactor: 1,
-              })
-            }
-
+      {page === "minionSetupDemon" && (
+        <SelectMinionDemonPage
+          minionTypeCount={minionTypeCount}
+          minions={minions}
+          onBack={handleBack}
+          onSelect={(minion) => {
+            setSelectedMinion({
+              ...minion,
+              strategy: "",
+              defenseFactor: 1,
+            })
             setPage("strategy")
           }}
           onRemove={handleRemove}
@@ -196,36 +228,45 @@ function App() {
       )}
 
       {page === "strategy" && selectedMinion && (
-        <StrategySetupPage
-          minion={selectedMinion}
-          onBack={handleBack}
-          onConfirm={(code, defenseFactor) => {
-            setMinions(prev => {
-              const exists = prev.find(m => m.type === selectedMinion.type)
-
-              if (exists) {
-                return prev.map(m =>
-                  m.type === selectedMinion.type
-                    ? { ...m, strategy: code, defenseFactor }
-                    : m
-                )
-              }
-
-              return [
-                ...prev,
-                { ...selectedMinion, strategy: code, defenseFactor },
-              ]
-            })
-
-            setSelectedMinion(null)
-            setPage("minionSetup")
-          }}
-        />
+        currentFaction === "DEMON" ? (
+          <StrategySetupDemonPage
+            minion={selectedMinion}
+            onBack={handleBack}
+            onConfirm={(code, defenseFactor) => {
+              setMinions(prev => [
+                ...prev.filter(m => m.type !== selectedMinion.type),
+                { ...selectedMinion, strategy: code, defenseFactor }
+              ])
+              setSelectedMinion(null)
+              setPage("minionSetupDemon")
+            }}
+          />
+        ) : (
+          <StrategySetupHumanPage
+            minion={selectedMinion}
+            onBack={handleBack}
+            onConfirm={(code, defenseFactor) => {
+              setMinions(prev => [
+                ...prev.filter(m => m.type !== selectedMinion.type),
+                { ...selectedMinion, strategy: code, defenseFactor }
+              ])
+              setSelectedMinion(null)
+              setPage("minionSetupHuman")
+            }}
+          />
+        )
       )}
 
       {page === "preBattle" && (
+        <PreBattlePage
+          onBack={handleBack}
+          onConfirm={() => setPage("game")}
+        />
+      )}
+
+      {page === "game" && (
         <div className="w-full h-full flex items-center justify-center text-white text-4xl">
-          PRE BATTLE PAGE
+          GAME PAGE (next step)
         </div>
       )}
     </GameWrapper>

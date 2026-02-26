@@ -6,37 +6,6 @@ const BASE_URL = "http://localhost:8080/api/game"
 
 
 // ======================================================
-// ADD MINION (Strategy Confirm)
-// ======================================================
-
-export async function addMinion(
-  type: string,
-  defenseFactor: number,
-  strategy: string
-) {
-  const res = await fetch(`${BASE_URL}/minion/create`, {   // ✅ แก้ endpoint
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      type,
-      defenseFactor,
-      strategy,
-    }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Failed to create minion")
-  }
-
-  // Backend return plain text
-  return res.text()   // ✅ แก้จาก res.json()
-}
-
-
-// ======================================================
 // CHARACTER
 // ======================================================
 
@@ -55,6 +24,7 @@ export const setCharacter = async (
 
   return res.json()
 }
+
 
 // ======================================================
 // MODE
@@ -90,8 +60,7 @@ export const getConfig = async () => {
     throw new Error("Failed to load config")
   }
 
-  const text = await res.text()
-  return text ? JSON.parse(text) : null
+  return res.json()
 }
 
 export const saveConfig = async (config: any) => {
@@ -108,6 +77,32 @@ export const saveConfig = async (config: any) => {
   }
 
   return res.json()
+}
+
+
+// ======================================================
+// SETUP FULL (แทน addMinion เดิม)
+// ======================================================
+
+export const setupFull = async (minions: {
+  type: string
+  defenseFactor: number
+  strategy: string
+}[]) => {
+  const res = await fetch(`${BASE_URL}/setup/full`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(minions),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || "Setup failed")
+  }
+
+  return res.text()
 }
 
 
@@ -136,7 +131,8 @@ export const startGame = async () => {
   })
 
   if (!res.ok) {
-    throw new Error("Failed to start game")
+    const text = await res.text()
+    throw new Error(text || "Failed to start game")
   }
 
   return res.text()

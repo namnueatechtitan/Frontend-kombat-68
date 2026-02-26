@@ -1,21 +1,21 @@
 import { useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
-import bg from "../assets/images/background-config.png"
+import bg from "../assets/images/demonsetup.png"
 import logo from "../assets/images/logo.png"
 import boardSelectMinion from "../assets/images/boardselectminion.png"
 import BackButton from "../components/BackButton"
-import fighterImg from "../assets/images/minions/Human/fighterhuman.png"
-import tankImg from "../assets/images/minions/Human/tankhuman.png"
-import dpsImg from "../assets/images/minions/Human/dpshuman.png"
-import assassinImg from "../assets/images/minions/Human/assassinhuman.png"
-import supportImg from "../assets/images/minions/Human/supporthuman.png"
+import fighterImg from "../assets/images/minions/Demon/fighterdemon.png"
+import tankImg from "../assets/images/minions/Demon/tankdemon.png"
+import dpsImg from "../assets/images/minions/Demon/dpsdemon.png"
+import assassinImg from "../assets/images/minions/Demon/assassindemon.png"
+import supportImg from "../assets/images/minions/Demon/supportdemon.png"
 import finalOverlayImg from "../assets/images/finalOverlayBoard.png"
-import { humanMinions } from "../data/humanMinions"
-import fighterPreview from "../assets/images/minions/Human/human_fighter_preview.png"
-import tankPreview from "../assets/images/minions/Human/human_tank_preview.png"
-import dpsPreview from "../assets/images/minions/Human/human_dps_preview.png"
-import assassinPreview from "../assets/images/minions/Human/human_assassin_preview.png"
-import supportPreview from "../assets/images/minions/Human/human_support_preview.png"
+import { demonMinions } from "../data/demonMinions"
+import fighterPreview from "../assets/images/minions/Demon/demon_fighter_preview.png"
+import tankPreview from "../assets/images/minions/Demon/demon_tank_preview.png"
+import dpsPreview from "../assets/images/minions/Demon/demon_dps_preview.png"
+import assassinPreview from "../assets/images/minions/Demon/demon_assassin_preview.png"
+import supportPreview from "../assets/images/minions/Demon/demon_support_preview.png"
 
 import type { MinionData, MinionType } from "../types/MinionData"
 
@@ -33,7 +33,7 @@ interface Props {
   onNext: () => void
 }
 
-export default function SelectMinionHumanPage({
+export default function SelectMinionDemonPage({
   minionTypeCount,
   minions,
   onBack,
@@ -63,11 +63,11 @@ export default function SelectMinionHumanPage({
   ]
 
   const colorMap: Record<MinionType, string> = {
-    FIGHTER: "#195A45",
-    ASSASSIN: "#6A2834",
-    DPS: "#031A54",
+    FIGHTER: "#310500",
+    ASSASSIN: "#720066",
+    DPS: "#001311",
     TANK: "#D42828",
-    SUPPORT: "#745531",
+    SUPPORT: "#372026",
   }
 
   const previewMap: Record<MinionType, string> = {
@@ -79,17 +79,17 @@ export default function SelectMinionHumanPage({
   }
 
   function handleConfirmClick() {
-  if (!selectedMinion) return
+    if (!selectedMinion) return
 
-  const minionData = humanMinions.find(
-    (m) => m.type === selectedMinion
-  )
+    const minionData = demonMinions.find(
+      (m) => m.type === selectedMinion
+    )
 
-  if (!minionData) return
+    if (!minionData) return
 
-  onSelect(minionData)
-  setSelectedMinion(null)
-}
+    onSelect(minionData)
+    setSelectedMinion(null)
+  }
 
   return (
     <div className="relative w-full min-h-screen">
@@ -106,7 +106,7 @@ export default function SelectMinionHumanPage({
           <div className="flex items-center gap-6">
             <img src={logo} alt="logo" className="w-[90px]" draggable={false} />
             <h1 className="text-5xl font-extrabold tracking-wide bg-[linear-gradient(90deg,#FFD54F,#FF9800)] bg-clip-text text-transparent">
-              Select Minion Human Type
+              Select Minion Demon Type
             </h1>
           </div>
         </div>
@@ -173,39 +173,41 @@ export default function SelectMinionHumanPage({
                           <h2 className="text-white text-xl font-semibold">
                             {minion.key}
                           </h2>
-                          {!configured && (
-  <button
-    type="button"
-    onClick={(e) => {
-      e.stopPropagation()
-      if (!isLimitReached)
-        setSelectedMinion(minion.key)
-    }}
-    style={{
-      backgroundColor:
-        isSelected ? colorMap[minion.key] : "#3B82F6",
-      boxShadow: isSelected
-        ? `0 0 12px ${colorMap[minion.key]}`
-        : "none",
-    }}
-    className="
-      w-20
-      h-8
-      flex
-      items-center
-      justify-center
-      text-sm
-      rounded-full
-      text-white
-      transition-all
-      duration-300
-    "
-  >
-    Select
-  </button>
-)}
 
-                      
+                          {!configured && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (!isLimitReached)
+                                  setSelectedMinion(minion.key)
+                              }}
+                              style={{
+                                backgroundColor:
+                                  isSelected
+                                    ? colorMap[minion.key]
+                                    : "#3B82F6",
+                                boxShadow: isSelected
+                                  ? `0 0 12px ${colorMap[minion.key]}`
+                                  : "none",
+                              }}
+                              className="
+                                w-20
+                                h-8
+                                flex
+                                items-center
+                                justify-center
+                                text-sm
+                                rounded-full
+                                text-white
+                                transition-all
+                                duration-300
+                              "
+                            >
+                              Select
+                            </button>
+                          )}
+
                           {configured && (
                             <div className="flex flex-col gap-2">
                               <button
@@ -257,7 +259,6 @@ export default function SelectMinionHumanPage({
         </div>
       </div>
 
-      {/* Bottom Buttons */}
       <div className="fixed bottom-10 left-0 right-0 z-50 flex justify-center gap-16">
         <BackButton onClick={() => setSelectedMinion(null)} />
 
@@ -269,7 +270,7 @@ export default function SelectMinionHumanPage({
         ) : (
           <button
             onClick={() => setIsFinalConfirmOpen(true)}
-            className="px-10 py-3 rounded-full bg-gradient-to-r from-orange-500 to-yellow-400 text-white"
+            className="px-10 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white"
           >
             Final Confirm
           </button>
@@ -298,7 +299,7 @@ export default function SelectMinionHumanPage({
 
               <button
                 onClick={onNext}
-                className="px-14 py-3 rounded-full bg-gradient-to-r from-orange-500 to-yellow-400 text-white"
+                className="px-14 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white"
               >
                 Confirm
               </button>

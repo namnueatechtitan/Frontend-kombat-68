@@ -74,7 +74,7 @@ export default function ConfigPage({  onConfirm }: Props) {
         <img
           src={logo}
           alt="logo"
-          className="mt-[80px] w-[120px] md:w-[160px] select-none"
+          className="mt-[20px] w-[120px] md:w-[160px] select-none"
           draggable={false}
         />
 
