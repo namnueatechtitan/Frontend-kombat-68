@@ -4,7 +4,7 @@ import { useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
 
 // API
-import { setCharacter } from "../api/gameApi"
+import { setCharacter } from "../api/gameApi.ts"
 
 // Assets
 import bg from "../assets/images/background-config.png"

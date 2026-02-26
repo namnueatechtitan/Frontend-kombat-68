@@ -3,7 +3,7 @@ import ConfirmButton from "../components/ConfirmButton"
 import ConfigBoard from "../components/ConfigBoard"
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
-import { getConfig, saveConfig } from "../api/gameApi"
+import { getConfig, saveConfig } from "../api/gameApi.ts"
 
 interface Props {
   onBack: () => void

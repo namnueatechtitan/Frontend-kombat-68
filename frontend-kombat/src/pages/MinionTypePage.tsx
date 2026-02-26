@@ -1,6 +1,6 @@
 import { useState } from "react"
 
-import { setMinionTypeCount } from "../api/gameApi"
+import { setMinionTypeCount } from "../api/gameApi.ts"
 
 // Components
 import ConfirmButton from "../components/ConfirmButton"
@@ -21,11 +21,15 @@ interface Props {
   onConfirm: (minionType: number) => void
 }
 
-export default function MinionTypePage({ onConfirm }: Props) {
+export default function MinionTypePage({ onBack, onConfirm }: Props) {
   const minionTypes = [type1, type2, type3, type4, type5]
 
   const [currentIndex, setCurrentIndex] = useState(0)
+
+  // ✅ แก้ตรงนี้ให้ถูก syntax
+  const [direction, setDirection] =
     useState<"left" | "right" | null>(null)
+
   const [isAnimating, setIsAnimating] = useState(false)
   const [shake, setShake] = useState(false)
 
@@ -37,30 +41,29 @@ export default function MinionTypePage({ onConfirm }: Props) {
     setTimeout(() => {
       setIsAnimating(false)
       setShake(false)
+      setDirection(null)
     }, 300)
   }
 
   const handleNext = () => {
     if (isAnimating) return
+    setDirection("right")
     const next = (currentIndex + 1) % minionTypes.length
     triggerChange(next)
   }
 
   const handlePrev = () => {
     if (isAnimating) return
+    setDirection("left")
     const prev =
       (currentIndex - 1 + minionTypes.length) % minionTypes.length
     triggerChange(prev)
   }
 
-  // ✅ ยิง backend ก่อน confirm
   const handleConfirm = async () => {
     try {
       const selectedType = currentIndex + 1
-
       await setMinionTypeCount(selectedType)
-
-      // ถ้าสำเร็จ ค่อยไปหน้าถัดไป
       onConfirm(selectedType)
     } catch (error) {
       console.error("Failed to set minion type count", error)
@@ -96,19 +99,12 @@ export default function MinionTypePage({ onConfirm }: Props) {
         src={bg}
         alt="background"
         draggable={false}
-        className="
-          absolute inset-0
-          w-full h-full
-          object-cover
-          select-none
-          pointer-events-none
-        "
+        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
       />
 
       <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center w-full h-full">
-        {/* Logo */}
         <img
           src={logo}
           alt="logo"
@@ -116,7 +112,6 @@ export default function MinionTypePage({ onConfirm }: Props) {
           className="mt-[50px] w-[100px] select-none"
         />
 
-        {/* Title */}
         <h1
           className="
             text-4xl md:text-5xl
@@ -130,20 +125,13 @@ export default function MinionTypePage({ onConfirm }: Props) {
           SELECT MINION TYPE
         </h1>
 
-        {/* Selector */}
         <div className="relative flex items-center justify-center">
-          {/* Left Arrow */}
           <ArrowButton
             direction="left"
             onClick={handlePrev}
-            className="
-              absolute -left-28 md:-left-36
-              transition-all duration-150
-              hover:scale-105
-            "
+            className="absolute -left-28 md:-left-36"
           />
 
-          {/* Minion Image */}
           <img
             key={currentIndex}
             src={minionTypes[currentIndex]}
@@ -161,39 +149,19 @@ export default function MinionTypePage({ onConfirm }: Props) {
             `}
           />
 
-          {/* Flash Effect */}
-          {isAnimating && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div
-                className="
-                  w-[60%] aspect-square rounded-full animate-ping
-                  bg-[radial-gradient(circle,_rgba(255,0,0,0.6)_0%,_rgba(255,0,0,0.3)_40%,_transparent_70%)]
-                "
-              />
-            </div>
-          )}
-
-          {/* Right Arrow */}
           <ArrowButton
             direction="right"
             onClick={handleNext}
-            className="
-              absolute -right-28 md:-right-36
-              transition-all duration-150
-              hover:scale-105
-            "
+            className="absolute -right-28 md:-right-36"
           />
         </div>
 
-        {/* Counter */}
         <div className="mt-6 text-white text-lg tracking-wide">
           Minion Type {currentIndex + 1} / {minionTypes.length}
         </div>
-
-        {/* Confirm */}
         <div className="mt-8">
           <ConfirmButton onClick={handleConfirm} />
-        </div>
+        </div>      
       </div>
     </div>
   )

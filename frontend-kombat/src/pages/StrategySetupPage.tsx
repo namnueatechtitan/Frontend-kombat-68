@@ -1,9 +1,16 @@
 import { useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
-import type { MinionData } from "./SelectMinionHumanPage"
+import type { MinionData, MinionType } from "../types/MinionData"
 
 import bg from "../assets/images/Minion setup.png"
 import logo from "../assets/images/logo.png"
+
+// ✅ เพิ่มรูปของ StrategySetupPage เอง
+import assassinPortrait from "../assets/images/minions/Human/human_assassin_preview_portrait.png"
+import fighterPortrait from "../assets/images/minions/Human/human_fighter_preview_portrait.png"
+import dpsPortrait from "../assets/images/minions/Human/human_dps_preview_portrait.png"
+import tankPortrait from "../assets/images/minions/Human/human_tank_preview_portrait.png"
+import supportPortrait from "../assets/images/minions/Human/human_support_preview_portrait.png"
 
 interface Props {
   minion: MinionData
@@ -12,6 +19,15 @@ interface Props {
 }
 
 type TemplateType = "AGGRESSIVE" | "DEFENSIVE" | "RANDOM"
+
+
+const portraitMap: Record<MinionType, string> = {
+  ASSASSIN: assassinPortrait,
+  FIGHTER: fighterPortrait,
+  DPS: dpsPortrait,
+  TANK: tankPortrait,
+  SUPPORT: supportPortrait,
+}
 
 export default function StrategySetupPage({
   minion,
@@ -22,6 +38,9 @@ export default function StrategySetupPage({
   const [defenFactor, setDefenFactor] = useState(1)
   const [selectedTemplate, setSelectedTemplate] =
     useState<TemplateType | null>(null)
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const templates: Record<TemplateType, string> = {
     AGGRESSIVE: `if (nearby up) then {
@@ -46,10 +65,42 @@ done`,
     setCode(templates[type])
   }
 
+  async function handleConfirm() {
+    if (!code.trim() || loading) return
+
+    try {
+      setLoading(true)
+      setError("")
+
+      const res = await fetch("http://localhost:8080/api/game/minion/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: minion.type,
+          defenseFactor: defenFactor,
+          strategy: code,
+        }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || "Failed to create minion")
+      }
+
+      onConfirm(code, defenFactor)
+
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-start">
 
-      {/* BACKGROUND */}
       <img
         src={bg}
         alt="background"
@@ -58,7 +109,6 @@ done`,
       />
       <div className="absolute inset-0 bg-black/60" />
 
-      {/* HEADER */}
       <div className="relative z-10 mt-10 flex flex-col items-center">
         <img
           src={logo}
@@ -76,7 +126,6 @@ done`,
         </h1>
       </div>
 
-      {/* FRAME */}
       <div
         className="
         relative z-10
@@ -92,7 +141,6 @@ done`,
         overflow-hidden
         "
       >
-        {/* TOP BAR */}
         <div
           className="
           h-[50px]
@@ -106,38 +154,32 @@ done`,
           to-[#6a3f1f]
         "
         >
-          EDITING {minion.name.toUpperCase()} (TYPE 1)
+          EDITING {minion.name.toUpperCase()}
         </div>
 
-        {/* CONTENT */}
         <div className="flex h-[calc(100%-50px)]">
 
-          {/* LEFT PANEL */}
           <div className="w-[30%] relative p-10 text-[#f1d8a5]">
-
             <div className="absolute right-0 top-0 bottom-0 w-[2px]
               bg-gradient-to-b from-transparent via-[#c6932f] to-transparent" />
 
-            <div className="text-lg tracking-widest mb-6 text-[#e6c27a]">
+            <div className="text-lg tracking-widest mb-8 text-[#e6c27a]">
               SELECTED MINION
             </div>
 
-            {/* 🔥 แสดงรูปจาก minion */}
             <img
-              src={minion.preview}
+              src={portraitMap[minion.type]}
               alt={minion.name}
               className="
-                w-[240px]
-                h-[260px]
+                w-[300px]
+                h-[300px]
                 object-contain
-                border border-[#c6932f]
                 rounded-lg
-                mb-8
+                mb-1
               "
               draggable={false}
             />
 
-            {/* DEFENSE */}
             <div
               className="
                 flex items-center justify-between
@@ -148,7 +190,7 @@ done`,
                 text-lg tracking-[0.15em]
               "
             >
-              <span className="flex items-center">
+              <span>
                 Defense =
                 <input
                   type="number"
@@ -169,22 +211,9 @@ done`,
                   "
                 />
               </span>
-
-              <div className="
-                w-5 h-5
-                rounded-full
-                bg-[#E6C27A]
-                flex items-center justify-center
-                text-[#29795F]
-                text-lg
-              ">
-                ▶
-              </div>
             </div>
-
           </div>
 
-          {/* CENTER PANEL */}
           <div className="w-[40%] relative p-10">
             <div className="absolute right-0 top-0 bottom-0 w-[2px]
               bg-gradient-to-b from-transparent via-[#c6932f] to-transparent" />
@@ -209,9 +238,7 @@ done`,
             />
           </div>
 
-          {/* RIGHT PANEL */}
           <div className="w-[30%] p-10 text-[#f1d8a5] relative">
-
             <div className="text-lg tracking-widest mb-8 text-[#e6c27a]">
               QUICK TEMPLATES
             </div>
@@ -248,25 +275,10 @@ done`,
                 )
               }
             )}
-
-            <div className="
-              my-8 h-[2px]
-              bg-gradient-to-r from-transparent via-[#c6932f] to-transparent
-            " />
-
-            <div className="text-sm text-[#cbb07a] leading-7">
-              <p>- move &lt;direction&gt;</p>
-              <p>- shoot &lt;direction&gt; &lt;cost&gt;</p>
-              <p>- if / else</p>
-              <p>- while</p>
-              <p>- done</p>
-            </div>
-
           </div>
         </div>
       </div>
 
-      {/* FOOTER */}
       <div className="relative z-10 flex gap-20 mt-10 mb-16">
         <button
           onClick={onBack}
@@ -283,11 +295,16 @@ done`,
         </button>
 
         <ConfirmButton
-          onClick={() => onConfirm(code, defenFactor)}
-          disabled={!code.trim()}
+          onClick={handleConfirm}
+          disabled={!code.trim() || loading}
         />
       </div>
 
+      {error && (
+        <div className="fixed bottom-4 left-0 right-0 text-center text-red-500 font-semibold z-50">
+          {error}
+        </div>
+      )}
     </div>
   )
 }

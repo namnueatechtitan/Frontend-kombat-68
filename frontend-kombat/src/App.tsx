@@ -8,11 +8,9 @@ import ConfigPage from "./pages/ConfigPage"
 import ModePage from "./pages/ModePage"
 import MinionTypePage from "./pages/MinionTypePage"
 import SelectCharacterPage from "./pages/SelectCharacterPage"
-import SelectMinionHumanPage, {
-  type MinionData,
-} from "./pages/SelectMinionHumanPage"
 import StrategySetupPage from "./pages/StrategySetupPage"
-
+import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
+import type { MinionData } from "./types/MinionData"
 import { setMode } from "./api/gameApi"
 
 function App() {
@@ -24,19 +22,24 @@ function App() {
     | "selectUI"
     | "minionSetup"
     | "strategy"
+    | "preBattle"   // ✅ เพิ่มหน้าใหม่
   >("start")
 
-  // 🔥 เก็บ minion ที่เลือกไว้ตรงกลาง App
   const [selectedMinion, setSelectedMinion] =
     useState<MinionData | null>(null)
+
+  const [minionTypeCount, setMinionTypeCount] =
+    useState<number>(0)
+
+  const [createdCount, setCreatedCount] =
+    useState<number>(0)
 
   // -------------------- MODE --------------------
   const handleModeConfirm = async (
     mode: "DUEL" | "SOLITAIRE" | "AUTO"
   ) => {
     try {
-      const result = await setMode(mode)
-      console.log("Backend response:", result)
+      await setMode(mode)
       setPage("minionType")
     } catch (error) {
       console.error("Error:", error)
@@ -44,12 +47,10 @@ function App() {
     }
   }
 
-  // -------------------- BACK LOGIC --------------------
+  // -------------------- BACK --------------------
   const handleBack = () => {
     switch (page) {
       case "config":
-        setPage("start")
-        break
       case "mode":
         setPage("start")
         break
@@ -63,6 +64,9 @@ function App() {
         setPage("selectUI")
         break
       case "strategy":
+        setPage("minionSetup")
+        break
+      case "preBattle":
         setPage("minionSetup")
         break
     }
@@ -80,7 +84,6 @@ function App() {
         )
       }
     >
-      {/* -------------------- START -------------------- */}
       {page === "start" && (
         <StartPage
           onConfig={() => setPage("config")}
@@ -88,7 +91,6 @@ function App() {
         />
       )}
 
-      {/* -------------------- CONFIG -------------------- */}
       {page === "config" && (
         <ConfigPage
           onBack={handleBack}
@@ -96,7 +98,6 @@ function App() {
         />
       )}
 
-      {/* -------------------- MODE -------------------- */}
       {page === "mode" && (
         <ModePage
           onBack={handleBack}
@@ -104,15 +105,18 @@ function App() {
         />
       )}
 
-      {/* -------------------- MINION TYPE -------------------- */}
       {page === "minionType" && (
         <MinionTypePage
           onBack={handleBack}
-          onConfirm={() => setPage("selectUI")}
+          onConfirm={(count: number) => {
+            setMinionTypeCount(count)
+            setCreatedCount(0)
+            setSelectedMinion(null)
+            setPage("selectUI")
+          }}
         />
       )}
 
-      {/* -------------------- SELECT CHARACTER -------------------- */}
       {page === "selectUI" && (
         <SelectCharacterPage
           onBack={handleBack}
@@ -120,32 +124,42 @@ function App() {
         />
       )}
 
-      {/* -------------------- MINION SETUP -------------------- */}
       {page === "minionSetup" && (
         <SelectMinionHumanPage
+          minionTypeCount={minionTypeCount}
+          createdCount={createdCount}
           onBack={handleBack}
+          onNext={() => setPage("preBattle")}   // ✅ ส่งไปหน้า PreBattle
           onConfirm={(minion) => {
-            console.log("Selected Minion:", minion)
-            setSelectedMinion(minion) // 🔥 เก็บไว้
+            setSelectedMinion(minion)
             setPage("strategy")
           }}
         />
       )}
 
-      {/* -------------------- STRATEGY PAGE -------------------- */}
       {page === "strategy" && selectedMinion && (
         <StrategySetupPage
-          minion={selectedMinion} // 🔥 ส่งไปหน้า Strategy
+          minion={selectedMinion}
           onBack={handleBack}
-          onConfirm={(code, defenFactor) => {
-            console.log("Strategy Code:", code)
-            console.log("Defense:", defenFactor)
+          onConfirm={() => {
+            setCreatedCount(prev => {
+              const newCount = prev + 1
+              return newCount
+            })
 
-            // ตอนนี้ยังไม่ยิง API
-            setPage("minionSetup")
+            setSelectedMinion(null)
+            setPage("minionSetup") // กลับไปหน้า setup เสมอ
           }}
         />
       )}
+
+      {/* ✅ หน้า Pre Battle เปล่า ๆ */}
+      {page === "preBattle" && (
+        <div className="w-full h-full flex items-center justify-center text-white text-4xl">
+          PRE BATTLE PAGE
+        </div>
+      )}
+
     </GameWrapper>
   )
 }
