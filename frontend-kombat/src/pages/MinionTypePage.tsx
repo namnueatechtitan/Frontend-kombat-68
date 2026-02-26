@@ -1,12 +1,9 @@
 import { useState } from "react"
 
-import { setMinionTypeCount } from "../api/gameApi.ts"
-
-// Components
 import ConfirmButton from "../components/ConfirmButton"
 import ArrowButton from "../components/ArrowButton"
 
-// Assets
+// Asse
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
 
@@ -25,8 +22,6 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
   const minionTypes = [type1, type2, type3, type4, type5]
 
   const [currentIndex, setCurrentIndex] = useState(0)
-
-  // ✅ แก้ตรงนี้ให้ถูก syntax
   const [direction, setDirection] =
     useState<"left" | "right" | null>(null)
 
@@ -60,14 +55,10 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
     triggerChange(prev)
   }
 
-  const handleConfirm = async () => {
-    try {
-      const selectedType = currentIndex + 1
-      await setMinionTypeCount(selectedType)
-      onConfirm(selectedType)
-    } catch (error) {
-      console.error("Failed to set minion type count", error)
-    }
+  // ✅ แก้ตรงนี้: ไม่ยิง backend แล้ว
+  const handleConfirm = () => {
+    const selectedType = currentIndex + 1
+    onConfirm(selectedType)  // เก็บใน React state อย่างเดียว
   }
 
   return (
@@ -77,7 +68,6 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
         ${shake ? "animate-shake" : ""}
       `}
     >
-      {/* Shake Animation */}
       <style>
         {`
           @keyframes shake-soft {
@@ -94,7 +84,6 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
         `}
       </style>
 
-      {/* Background */}
       <img
         src={bg}
         alt="background"
@@ -159,9 +148,10 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
         <div className="mt-6 text-white text-lg tracking-wide">
           Minion Type {currentIndex + 1} / {minionTypes.length}
         </div>
+
         <div className="mt-8">
           <ConfirmButton onClick={handleConfirm} />
-        </div>      
+        </div>
       </div>
     </div>
   )

@@ -1,9 +1,14 @@
 interface Props {
   onClick?: () => void
   disabled?: boolean
+  children?: React.ReactNode
 }
 
-export default function ConfirmButton({ onClick, disabled }: Props) {
+export default function BackButton({
+  onClick,
+  disabled,
+  children = "Back",
+}: Props) {
   return (
     <button
       type="button"
@@ -19,23 +24,24 @@ export default function ConfirmButton({ onClick, disabled }: Props) {
         text-lg
         transition-all
         duration-300
-        transform
         ${
           disabled
             ? "bg-gray-400 cursor-not-allowed"
             : `
-              bg-gradient-to-r
-              from-[#FF3D00]
-              to-[#ECDB46]
+              bg-gradient-to-r 
+              from-blue-500 
+              to-blue-400
+              hover:from-blue-600 
+              hover:to-blue-500
               hover:scale-105
-              hover:shadow-xl
               shadow-md
-              hover:shadow-[0_0_25px_rgba(255,120,0,0.7)]
+              hover:shadow-xl
             `
         }
       `}
     >
-      Confirm
+      {children}
     </button>
   )
 }
+

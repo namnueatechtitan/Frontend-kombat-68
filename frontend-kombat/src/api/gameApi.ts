@@ -56,28 +56,6 @@ export const setCharacter = async (
   return res.json()
 }
 
-
-// ======================================================
-// MINION TYPE COUNT
-// ======================================================
-
-export const setMinionTypeCount = async (count: number) => {
-  const res = await fetch(`${BASE_URL}/minion-type-count`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ count }),
-  })
-
-  if (!res.ok) {
-    throw new Error("Failed to set minion type count")
-  }
-
-  return res.json()
-}
-
-
 // ======================================================
 // MODE
 // ======================================================
