@@ -267,12 +267,10 @@ export default function SelectMinionHumanPage({
             disabled={!selectedMinion}
           />
         ) : (
-          <button
-            onClick={() => setIsFinalConfirmOpen(true)}
-            className="px-10 py-3 rounded-full bg-gradient-to-r from-orange-500 to-yellow-400 text-white"
-          >
-            Final Confirm
-          </button>
+          <ConfirmButton
+  onClick={() => setIsFinalConfirmOpen(true)}
+  label="Final Confirm"
+/>
         )}
       </div>
 

@@ -6,22 +6,28 @@ const BASE_URL = "http://localhost:8080/api/game"
 
 
 // ======================================================
-// CHARACTER
+// CHARACTER (รองรับ 2 ผู้เล่น)
 // ======================================================
 
 export const setCharacter = async (
+  playerId: number,
   character: "HUMAN" | "DEMON"
 ) => {
   const res = await fetch(`${BASE_URL}/character`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ character }),
+    body: JSON.stringify({
+      playerId,
+      character,
+    }),
   })
 
   if (!res.ok) {
-    throw new Error("Failed to set character")
+    const text = await res.text()
+    throw new Error(text || "Failed to set character")
   }
 
+  // backend return CharacterType (string)
   return res.json()
 }
 
@@ -42,7 +48,8 @@ export const setMode = async (
   })
 
   if (!res.ok) {
-    throw new Error("Failed to set mode")
+    const text = await res.text()
+    throw new Error(text || "Failed to set mode")
   }
 
   return res.json()
@@ -57,7 +64,8 @@ export const getConfig = async () => {
   const res = await fetch(`${BASE_URL}/config`)
 
   if (!res.ok) {
-    throw new Error("Failed to load config")
+    const text = await res.text()
+    throw new Error(text || "Failed to load config")
   }
 
   return res.json()
@@ -73,7 +81,8 @@ export const saveConfig = async (config: any) => {
   })
 
   if (!res.ok) {
-    throw new Error("Failed to save config")
+    const text = await res.text()
+    throw new Error(text || "Failed to save config")
   }
 
   return res.json()
@@ -81,15 +90,18 @@ export const saveConfig = async (config: any) => {
 
 
 // ======================================================
-// SETUP FULL (แทน addMinion เดิม)
+// SETUP FULL (รองรับ playerId)
 // ======================================================
 
-export const setupFull = async (minions: {
-  type: string
-  defenseFactor: number
-  strategy: string
-}[]) => {
-  const res = await fetch(`${BASE_URL}/setup/full`, {
+export const setupFull = async (
+  playerId: number,
+  minions: {
+    type: string
+    defenseFactor: number
+    strategy: string
+  }[]
+) => {
+  const res = await fetch(`${BASE_URL}/setup/full/${playerId}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -114,7 +126,8 @@ export const getSetupSummary = async () => {
   const res = await fetch(`${BASE_URL}/setup`)
 
   if (!res.ok) {
-    throw new Error("Failed to load setup summary")
+    const text = await res.text()
+    throw new Error(text || "Failed to load setup summary")
   }
 
   return res.json()

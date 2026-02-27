@@ -1,9 +1,14 @@
 interface Props {
   onClick?: () => void
   disabled?: boolean
+  label?: string   // 👈 เพิ่มบรรทัดนี้
 }
 
-export default function ConfirmButton({ onClick, disabled }: Props) {
+export default function ConfirmButton({
+  onClick,
+  disabled,
+  label = "Confirm",   // 👈 เพิ่ม default ตรงนี้
+}: Props) {
   return (
     <button
       type="button"
@@ -35,7 +40,7 @@ export default function ConfirmButton({ onClick, disabled }: Props) {
         }
       `}
     >
-      Confirm
+      {label}   {/* 👈 เปลี่ยนจาก Confirm เป็น label */}
     </button>
   )
 }

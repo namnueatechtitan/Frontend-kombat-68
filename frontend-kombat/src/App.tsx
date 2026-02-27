@@ -25,6 +25,10 @@ interface ConfiguredMinion extends MinionData {
 }
 
 function App() {
+
+  // =========================
+  // PAGE STATE
+  // =========================
   const [page, setPage] = useState<
     | "start"
     | "config"
@@ -38,6 +42,12 @@ function App() {
     | "game"
   >("start")
 
+  // =========================
+  // DUEL STATE
+  // =========================
+
+  const [setupPlayer, setSetupPlayer] = useState<1 | 2>(1)
+
   const [currentFaction, setCurrentFaction] =
     useState<"HUMAN" | "DEMON" | null>(null)
 
@@ -47,7 +57,17 @@ function App() {
   const [minionTypeCount, setMinionTypeCount] =
     useState<number>(0)
 
-  const [minions, setMinions] = useState<ConfiguredMinion[]>([])
+  const [minionsByPlayer, setMinionsByPlayer] =
+    useState<Record<1 | 2, ConfiguredMinion[]>>({
+      1: [],
+      2: []
+    })
+
+  const currentMinions = minionsByPlayer[setupPlayer]
+
+  // =========================
+  // MODE
+  // =========================
 
   const handleModeConfirm = async (
     mode: "DUEL" | "SOLITAIRE" | "AUTO"
@@ -61,40 +81,77 @@ function App() {
     }
   }
 
+  // =========================
+  // REMOVE MINION
+  // =========================
+
   const handleRemove = (type: MinionType) => {
-    setMinions(prev => prev.filter(m => m.type !== type))
+    setMinionsByPlayer(prev => ({
+      ...prev,
+      [setupPlayer]: prev[setupPlayer].filter(m => m.type !== type)
+    }))
+  }
+// =========================
+// FINAL CONFIRM
+// =========================
+
+const handleFinalConfirm = async () => {
+
+  if (currentMinions.length !== minionTypeCount) {
+    alert("Please configure all minions first")
+    return
   }
 
-  const handleFinalConfirm = async () => {
-    try {
-      if (minions.length !== minionTypeCount) {
-        alert("Please configure all minions first")
-        return
-      }
+  const isPlayer1 = setupPlayer === 1
 
-      const res = await fetch("http://localhost:8080/api/game/setup/full", {
+  try {
+
+    const res = await fetch(
+      `http://localhost:8080/api/game/setup/full/${setupPlayer}`,
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          minions.map(m => ({
+          currentMinions.map(m => ({
             type: m.type,
             strategy: m.strategy,
             defenseFactor: m.defenseFactor,
           }))
         ),
-      })
-
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || "Setup failed")
       }
+    )
 
-      setPage("preBattle")
-    } catch (err) {
-      console.error(err)
-      alert("Failed to complete setup")
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(text || "Setup failed")
     }
+
+    // =============================
+    // FLOW CONTROL
+    // =============================
+
+    if (isPlayer1) {
+      // ไปตั้งค่า Player 2
+      setSetupPlayer(2)
+      setCurrentFaction(null)
+      setSelectedMinion(null)
+      setPage("selectUI")
+    } else {
+      // Player 2 เสร็จ → ไป PreBattle
+      setCurrentFaction(null)
+      setSelectedMinion(null)
+      setPage("preBattle")
+    }
+
+  } catch (err) {
+    console.error(err)
+    alert("Failed to complete setup")
   }
+}
+ 
+  // =========================
+  // BACK
+  // =========================
 
   const handleBack = () => {
     switch (page) {
@@ -120,11 +177,7 @@ function App() {
         }
         break
       case "preBattle":
-        if (currentFaction === "DEMON") {
-          setPage("minionSetupDemon")
-        } else {
-          setPage("minionSetupHuman")
-        }
+        setPage("selectUI")
         break
       case "game":
         setPage("preBattle")
@@ -144,6 +197,7 @@ function App() {
         )
       }
     >
+
       {page === "start" && (
         <StartPage
           onConfig={() => setPage("config")}
@@ -170,8 +224,7 @@ function App() {
           onBack={handleBack}
           onConfirm={(count) => {
             setMinionTypeCount(count)
-            setMinions([])
-            setSelectedMinion(null)
+            setMinionsByPlayer({ 1: [], 2: [] })
             setPage("selectUI")
           }}
         />
@@ -179,6 +232,7 @@ function App() {
 
       {page === "selectUI" && (
         <SelectCharacterPage
+          setupPlayer={setupPlayer}
           onBack={handleBack}
           onConfirm={(uiType) => {
             setCurrentFaction(uiType)
@@ -194,7 +248,7 @@ function App() {
       {page === "minionSetupHuman" && (
         <SelectMinionHumanPage
           minionTypeCount={minionTypeCount}
-          minions={minions}
+          minions={currentMinions}
           onBack={handleBack}
           onSelect={(minion) => {
             setSelectedMinion({
@@ -212,7 +266,7 @@ function App() {
       {page === "minionSetupDemon" && (
         <SelectMinionDemonPage
           minionTypeCount={minionTypeCount}
-          minions={minions}
+          minions={currentMinions}
           onBack={handleBack}
           onSelect={(minion) => {
             setSelectedMinion({
@@ -233,10 +287,13 @@ function App() {
             minion={selectedMinion}
             onBack={handleBack}
             onConfirm={(code, defenseFactor) => {
-              setMinions(prev => [
-                ...prev.filter(m => m.type !== selectedMinion.type),
-                { ...selectedMinion, strategy: code, defenseFactor }
-              ])
+              setMinionsByPlayer(prev => ({
+                ...prev,
+                [setupPlayer]: [
+                  ...prev[setupPlayer].filter(m => m.type !== selectedMinion.type),
+                  { ...selectedMinion, strategy: code, defenseFactor }
+                ]
+              }))
               setSelectedMinion(null)
               setPage("minionSetupDemon")
             }}
@@ -246,10 +303,13 @@ function App() {
             minion={selectedMinion}
             onBack={handleBack}
             onConfirm={(code, defenseFactor) => {
-              setMinions(prev => [
-                ...prev.filter(m => m.type !== selectedMinion.type),
-                { ...selectedMinion, strategy: code, defenseFactor }
-              ])
+              setMinionsByPlayer(prev => ({
+                ...prev,
+                [setupPlayer]: [
+                  ...prev[setupPlayer].filter(m => m.type !== selectedMinion.type),
+                  { ...selectedMinion, strategy: code, defenseFactor }
+                ]
+              }))
               setSelectedMinion(null)
               setPage("minionSetupHuman")
             }}
@@ -269,6 +329,7 @@ function App() {
           GAME PAGE (next step)
         </div>
       )}
+
     </GameWrapper>
   )
 }

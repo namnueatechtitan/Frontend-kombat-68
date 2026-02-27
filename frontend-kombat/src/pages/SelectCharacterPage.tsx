@@ -13,12 +13,19 @@ import humanImg from "../assets/images/ui-human.png"
 import demonImg from "../assets/images/ui-demon.png"
 
 interface Props {
+  setupPlayer: 1 | 2
   onBack: () => void
   onConfirm: (uiType: "HUMAN" | "DEMON") => void
 }
 
-export default function SelectCharacterPage({ onConfirm }: Props) {
-  const [selected, setSelected] = useState<"HUMAN" | "DEMON" | null>(null)
+export default function SelectCharacterPage({
+  setupPlayer,
+  onConfirm
+}: Props) {
+
+  const [selected, setSelected] =
+    useState<"HUMAN" | "DEMON" | null>(null)
+
   const [shake, setShake] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -37,22 +44,24 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
   try {
     setLoading(true)
 
-    // ยิง backend แต่ถ้าพังไม่ให้บล็อคหน้า
-    try {
-      await setCharacter(selected)
-    } catch (apiError) {
-      console.warn("Backend error but continue UI:", apiError)
-    }
+  
+    await setCharacter(setupPlayer, selected)
 
-    // 🔥 ไปหน้าถัดไปเสมอ
     onConfirm(selected)
 
   } catch (err) {
-    console.error(err)
+    console.error("Failed to set character:", err)
+    alert("Failed to save character selection")
   } finally {
     setLoading(false)
   }
 }
+
+  const isPlayer1 = setupPlayer === 1
+
+  const playerTextColor = isPlayer1
+    ? "text-red-500"
+    : "text-purple-400"
 
   return (
     <div
@@ -61,7 +70,6 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
         ${shake ? "animate-shake" : ""}
       `}
     >
-      {/* Shake Animation */}
       <style>
         {`
           @keyframes shake-soft {
@@ -86,10 +94,11 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
         className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
       />
 
-      <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+      {/* Soft dark overlay only (no red/purple tint anymore) */}
+      <div className="absolute inset-0 bg-black/30 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center w-full h-full">
-        {/* Logo */}
+
         <img
           src={logo}
           alt="logo"
@@ -97,7 +106,6 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
           className="mt-[50px] w-[100px] select-none"
         />
 
-        {/* Title */}
         <h1
           className="
             text-4xl md:text-5xl
@@ -105,14 +113,17 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
             bg-[radial-gradient(circle,_#FFFFFF_0%,_#FFB300_60%,_#FFB300_100%)]
             bg-clip-text text-transparent
             drop-shadow-[0_0_12px_rgba(255,179,0,0.6)]
-            mt-6 mb-10
+            mt-6
           "
         >
-          SELECT UI
+          SELECT CHARACTER
         </h1>
 
-        {/* Options */}
-        <div className="flex gap-16 items-center justify-center">
+        <div className={`mt-4 text-2xl font-extrabold tracking-widest ${playerTextColor}`}>
+          PLAYER {setupPlayer}
+        </div>
+
+        <div className="flex gap-16 items-center justify-center mt-10">
 
           {/* HUMAN */}
           <div className="flex flex-col items-center">
@@ -196,13 +207,13 @@ export default function SelectCharacterPage({ onConfirm }: Props) {
 
         </div>
 
-        {/* Confirm */}
         <div className="mt-12">
           <ConfirmButton
             onClick={handleConfirm}
             disabled={!selected || loading}
           />
         </div>
+
       </div>
     </div>
   )

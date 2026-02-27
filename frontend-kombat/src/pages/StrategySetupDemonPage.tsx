@@ -144,54 +144,114 @@ done;`,
             <img
               src={portraitMap[minion.type]}
               alt={minion.name}
-              className="w-[300px] h-[300px] object-contain rounded-lg mb-2"
+               className="w-[400px] h-[300px] object-contain rounded-lg mb-2 drop-shadow-[0_0_25px_rgba(246,210,122,0.5)]"
               draggable={false}
             />
+          {/* DEFENSE - DEMON PURPLE */}
+<div className="mt-1 flex justify-center">
+  <div className="relative flex items-center justify-center group">
 
-            {/* DEFENSE */}
-            <div className="mt-3 flex justify-center">
-              <div className="flex items-center gap-4 px-6 py-2
-                rounded-full
-                bg-[#3b1f0f]
-                border border-[#c6932f]
-                text-[#f6d27a]">
+    {/* 🟣 Outer rotating purple ring */}
+    <div className="
+      absolute w-[100px] h-[100px]
+      rounded-full
+      border border-[#a855f7]/40
+      shadow-[0_0_50px_rgba(168,85,247,0.8)]
+      animate-spin
+      [animation-duration:18s]
+    " />
 
-                <svg viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-5 h-5 text-[#c6932f]">
-                  <path d="M12 2L4 5v6c0 5.25 3.438 10.125 8 11
-                  4.563-.875 8-5.75 8-11V5l-8-3z" />
-                </svg>
+    {/* 🟣 Inner reverse ring */}
+    <div className="
+      absolute w-[70px] h-[70px]
+      rounded-full
+      border border-[#c084fc]/40
+      animate-spin
+      [animation-duration:12s]
+      [animation-direction:reverse]
+    " />
 
-                <button
-                  type="button"
-                  onClick={() => setDefenFactor(p => Math.max(1, p - 1))}
-                  className="w-7 h-7 rounded-full
-                    bg-[#8b5a2b] text-[#f6d27a]
-                    flex items-center justify-center
-                    hover:scale-110 transition">
-                  −
-                </button>
+    {/* 🟣 Floating purple particles */}
+    <div className="absolute w-[160px] h-[160px] pointer-events-none">
+      <div className="absolute top-3 left-1/2 w-2 h-2 bg-[#a855f7] rounded-full animate-ping opacity-80" />
+      <div className="absolute bottom-6 left-6 w-1.5 h-1.5 bg-[#c084fc] rounded-full animate-pulse opacity-70" />
+      <div className="absolute top-10 right-4 w-1.5 h-1.5 bg-[#9333ea] rounded-full animate-ping opacity-60" />
+      <div className="absolute bottom-8 right-8 w-2 h-2 bg-[#d8b4fe] rounded-full animate-pulse opacity-70" />
+    </div>
 
-                <span className="w-12 text-center font-bold text-lg">
-                  {defenFactor}
-                </span>
+    {/* 🟣 Core DEF Badge */}
+    <div
+      className="
+        relative
+        flex items-center gap-3 px-6 py-2
+        rounded-full
+        bg-gradient-to-r from-[#1a002b] via-[#4c1d95] to-[#1a002b]
+        border border-[#c084fc]
+        text-[#e9d5ff]
+        shadow-[0_0_35px_rgba(168,85,247,0.8)]
+        transition duration-500
+        group-hover:shadow-[0_0_65px_rgba(147,51,234,1)]
+        z-10
+      "
+    >
+      {/* Shield */}
+      <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className="w-6 h-6 text-[#c084fc]"
+      >
+        <path d="M12 2L4 5v6c0 5.25 3.438 10.125 8 11
+        4.563-.875 8-5.75 8-11V5l-8-3z" />
+      </svg>
 
-                <button
-                  type="button"
-                  onClick={() => setDefenFactor(p => Math.min(1000, p + 1))}
-                  className="w-7 h-7 rounded-full
-                    bg-[#c6932f] text-[#2e1a0f]
-                    flex items-center justify-center
-                    hover:scale-110 transition">
-                  +
-                </button>
+      {/* Minus */}
+      <button
+        type="button"
+        onClick={() => setDefenFactor(p => Math.max(1, p - 1))}
+        className="
+          w-7 h-7 rounded-full
+          bg-gradient-to-b from-[#c084fc] to-[#7e22ce]
+          text-[#1a002b] font-bold text-lg
+          flex items-center justify-center
+          hover:scale-110
+          hover:shadow-[0_0_15px_rgba(168,85,247,0.9)]
+          transition duration-300
+        "
+      >
+        −
+      </button>
 
-                <span className="ml-2 font-semibold tracking-[0.2em]">
-                  DEF
-                </span>
-              </div>
-            </div>
+      {/* Value */}
+      <span className="text-2xl font-bold tracking-widest text-[#f3e8ff]">
+        {defenFactor}
+      </span>
+
+      {/* Plus */}
+      <button
+        type="button"
+        onClick={() => setDefenFactor(p => Math.min(1000, p + 1))}
+        className="
+          w-7 h-7 rounded-full
+          bg-gradient-to-b from-[#c084fc] to-[#7e22ce]
+          text-[#1a002b] font-bold text-lg
+          flex items-center justify-center
+          hover:scale-110
+          hover:shadow-[0_0_15px_rgba(168,85,247,0.9)]
+          transition duration-300
+        "
+      >
+        +
+      </button>
+
+      <span className="text-sm tracking-[0.3em] text-[#e9d5ff]">
+        DEF
+      </span>
+    </div>
+
+  </div>
+</div>
+
+          
           </div>
 
           {/* MIDDLE */}
@@ -211,66 +271,135 @@ done;`,
             />
           </div>
 
-          {/* RIGHT PANEL (คืนครบ SVG) */}
-          <div className="w-[30%] p-10 text-[#f1d8a5]">
-            <div className="text-lg tracking-[0.2em] mb-8 text-[#e6c27a]">
-              QUICK TEMPLATES
-            </div>
+          {/* RIGHT PANEL */}
+<div className="w-[30%] p-10 text-[#e6dcff]">
 
-            {(["AGGRESSIVE","DEFENSIVE","RANDOM"] as TemplateType[]).map(type => {
+  {/* TITLE */}
+  <div className="mb-8">
 
-              const bgColorMap = {
-                AGGRESSIVE: "bg-[#59151A]",
-                DEFENSIVE: "bg-[#0D204B]",
-                RANDOM: "bg-[#1A312C]",
-              }
+    <div
+      className="
+        text-lg font-bold tracking-[0.3em]
+        bg-gradient-to-r from-[#f6d27a] to-[#c6932f]
+        bg-clip-text text-transparent
+        drop-shadow-[0_0_6px_rgba(246,210,122,0.6)]
+      "
+    >
+      QUICK TEMPLATES
+    </div>
 
-              return (
-                <button
-                  key={type}
-                  onClick={() => handleTemplateClick(type)}
-                  className={`
-                    w-full h-[60px]
-                    mb-10 px-12
-                    rounded-full
-                    text-[#EDEDED]
-                    tracking-[0.2em]
-                    flex items-center justify-between
-                    ${bgColorMap[type]}
-                    hover:scale-[1.02] transition
-                    ${selectedTemplate === type ? "ring-2 ring-white" : ""}
-                  `}
-                >
-                  <span className="uppercase">{type}</span>
+    <div className="mt-4 flex justify-center">
+      <div
+        className="
+          w-[80%] h-[2px]
+          bg-gradient-to-r
+          from-transparent
+          via-[#4b1d6b]/70
+          to-transparent
+          shadow-[0_0_8px_rgba(75,29,107,0.5)]
+          rounded-full
+        "
+      />
+    </div>
+  </div>
 
-                  <div
-                    className="w-[20px] h-[20px]
-                      rounded-full
-                      flex items-center justify-center
-                      shadow-lg"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #FF3D00 0%, #ECDB46 100%)",
-                    }}
-                  >
-                    <svg
-                      width="24"
-                      height="15"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#2B1A10"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="9 6 15 12 9 18" />
-                    </svg>
-                  </div>
+  {(["AGGRESSIVE", "DEFENSIVE", "RANDOM"] as TemplateType[]).map(type => {
 
-                </button>
-              )
-            })}
+    const iconMap = {
+      AGGRESSIVE: (
+        <svg width="18" height="18" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 4l6 6-8 8-6-6z" />
+          <path d="M10 14l-6 6" />
+        </svg>
+      ),
+      DEFENSIVE: (
+        <svg width="18" height="18" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2L4 5v6c0 5.25 3.438 10.125 8 11
+            4.563-.875 8-5.75 8-11V5l-8-3z" />
+        </svg>
+      ),
+      RANDOM: (
+        <svg width="18" height="18" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2"
+          strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="3" width="14" height="18" rx="2" />
+          <path d="M9 7h.01" />
+          <path d="M15 17h.01" />
+        </svg>
+      )
+    }
+
+    return (
+      <button
+        key={type}
+        onClick={() => handleTemplateClick(type)}
+        className={`
+          group relative
+          w-full h-[60px]
+          mb-10 px-12
+          rounded-full
+          tracking-[0.25em]
+          flex items-center justify-between
+          overflow-hidden
+          transition duration-300
+          bg-gradient-to-r from-[#1a0026] via-[#4b1d6b] to-[#1a0026]
+          border border-[#6a0dad]/40
+          text-[#e6dcff]
+          shadow-[0_0_25px_rgba(106,13,173,0.35)]
+          hover:shadow-[0_0_40px_rgba(106,13,173,0.55)]
+          hover:scale-[1.02]
+          ${selectedTemplate === type
+            ? "ring-1 ring-[#8b5cf6] shadow-[0_0_50px_rgba(139,92,246,0.6)]"
+            : ""}
+        `}
+      >
+
+        <div className="flex items-center gap-4 z-10">
+          <div className="
+            w-8 h-8 rounded-full
+            flex items-center justify-center
+            bg-black/40
+            shadow-[0_0_12px_rgba(106,13,173,0.5)]
+          ">
+            {iconMap[type]}
           </div>
+
+          <span className="uppercase font-semibold">
+            {type}
+          </span>
+        </div>
+
+        <div className="
+          w-[22px] h-[22px]
+          rounded-full
+          flex items-center justify-center
+          bg-gradient-to-b from-[#b58cff] to-[#6a0dad]
+          shadow-[0_0_12px_rgba(139,92,246,0.5)]
+          shrink-0
+          z-10
+        ">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#14001f"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 6 15 12 9 18" />
+          </svg>
+        </div>
+
+      </button>
+    )
+  })}
+</div>
 
         </div>
       </div>
