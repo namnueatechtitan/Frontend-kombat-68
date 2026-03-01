@@ -281,7 +281,6 @@ function App() {
           onNext={handleFinalConfirm}
         />
       )}
-
       {page === "strategy" && selectedMinion && (
         currentFaction === "DEMON" ? (
           <StrategySetupDemonPage

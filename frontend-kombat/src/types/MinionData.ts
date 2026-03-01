@@ -10,4 +10,6 @@ export interface MinionData {
   name: string
   image: string
   preview: string
+  strategy?: string
+  defenseFactor?: number
 }
