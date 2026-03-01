@@ -91,64 +91,65 @@ function App() {
       [setupPlayer]: prev[setupPlayer].filter(m => m.type !== type)
     }))
   }
-// =========================
-// FINAL CONFIRM
-// =========================
 
-const handleFinalConfirm = async () => {
+  // =========================
+  // FINAL CONFIRM
+  // =========================
 
-  if (currentMinions.length !== minionTypeCount) {
-    alert("Please configure all minions first")
-    return
-  }
+  const handleFinalConfirm = async () => {
 
-  const isPlayer1 = setupPlayer === 1
+    if (currentMinions.length !== minionTypeCount) {
+      alert("Please configure all minions first")
+      return
+    }
 
-  try {
+    const isPlayer1 = setupPlayer === 1
 
-    const res = await fetch(
-      `http://localhost:8080/api/game/setup/full/${setupPlayer}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          currentMinions.map(m => ({
-            type: m.type,
-            strategy: m.strategy,
-            defenseFactor: m.defenseFactor,
-          }))
-        ),
+    try {
+
+      const res = await fetch(
+        `http://localhost:8080/api/game/setup/full/${setupPlayer}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            currentMinions.map(m => ({
+              type: m.type,
+              strategy: m.strategy,
+              defenseFactor: m.defenseFactor,
+            }))
+          ),
+        }
+      )
+
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || "Setup failed")
       }
-    )
 
-    if (!res.ok) {
-      const text = await res.text()
-      throw new Error(text || "Setup failed")
+      // =============================
+      // FLOW CONTROL
+      // =============================
+
+      if (isPlayer1) {
+        // ไปตั้งค่า Player 2
+        setSetupPlayer(2)
+        setCurrentFaction(null)
+        setSelectedMinion(null)
+        setPage("selectUI")
+      } else {
+        // Player 2 เสร็จ → ไป PreBattle
+        setCurrentFaction(null)
+        setSelectedMinion(null)
+        setPage("preBattle")
+      }
+
+    } catch (err) {
+      console.error(err)
+      alert("Failed to complete setup")
     }
-
-    // =============================
-    // FLOW CONTROL
-    // =============================
-
-    if (isPlayer1) {
-      // ไปตั้งค่า Player 2
-      setSetupPlayer(2)
-      setCurrentFaction(null)
-      setSelectedMinion(null)
-      setPage("selectUI")
-    } else {
-      // Player 2 เสร็จ → ไป PreBattle
-      setCurrentFaction(null)
-      setSelectedMinion(null)
-      setPage("preBattle")
-    }
-
-  } catch (err) {
-    console.error(err)
-    alert("Failed to complete setup")
   }
-}
- 
+
   // =========================
   // BACK
   // =========================
@@ -253,8 +254,8 @@ const handleFinalConfirm = async () => {
           onSelect={(minion) => {
             setSelectedMinion({
               ...minion,
-              strategy: "",
-              defenseFactor: 1,
+              strategy: minion.strategy || "", // Check if minion already has a strategy
+              defenseFactor: minion.defenseFactor || 1, // Set default defenseFactor if not present
             })
             setPage("strategy")
           }}
@@ -271,8 +272,8 @@ const handleFinalConfirm = async () => {
           onSelect={(minion) => {
             setSelectedMinion({
               ...minion,
-              strategy: "",
-              defenseFactor: 1,
+              strategy: minion.strategy || "",
+              defenseFactor: minion.defenseFactor || 1,
             })
             setPage("strategy")
           }}
