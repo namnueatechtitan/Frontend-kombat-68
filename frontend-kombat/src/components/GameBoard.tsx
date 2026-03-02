@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import type { TurnPhase } from "../api/gameApi"
 
 interface SpawnableHex {
   row: number
@@ -8,8 +9,9 @@ interface SpawnableHex {
 
 interface Props {
   spawnableHexes: SpawnableHex[]
+  buyableHexes: SpawnableHex[]
   currentPlayer: number
-  phase: string
+  phase: TurnPhase
   onHexClick: (
     row: number,
     col: number,
@@ -20,6 +22,7 @@ interface Props {
 
 export default function GameBoard({
   spawnableHexes,
+  buyableHexes,
   currentPlayer,
   phase,
   onHexClick,
@@ -109,49 +112,22 @@ export default function GameBoard({
   }, [])
 
   // ==========================================
-  // NEIGHBOR CALC (HEX GRID)
+  // BUYABLE MAP (from backend)
   // ==========================================
 
-  const getNeighbors = (row: number, col: number) => {
-    const isOddRow = row % 2 === 1
-
-    const directions = isOddRow
-      ? [
-          [0, -1], [0, 1],
-          [-1, 0], [-1, 1],
-          [1, 0], [1, 1],
-        ]
-      : [
-          [0, -1], [0, 1],
-          [-1, -1], [-1, 0],
-          [1, -1], [1, 0],
-        ]
-
-    return directions
-      .map(([dr, dc]) => [row + dr, col + dc])
-      .filter(
-        ([r, c]) => r >= 0 && r < 8 && c >= 0 && c < 8
-      )
-  }
-
-  // ==========================================
-  // CHECK BUYABLE
-  // ==========================================
+  const buyableMap = useMemo(() => {
+    const map: Record<string, number> = {}
+    buyableHexes.forEach((h) => {
+      map[`${h.row}-${h.col}`] = h.ownerId
+    })
+    return map
+  }, [buyableHexes])
 
   const isBuyable = (row: number, col: number) => {
-    if (phase !== "BUY_HEX") return false
+    if (phase !== "PLAYER_ACTION") return false
 
-    const key = `${row}-${col}`
-
-    // already spawn
-    if (spawnMap[key]) return false
-
-    // must touch spawn of current player
-    const neighbors = getNeighbors(row, col)
-
-    return neighbors.some(([r, c]) => {
-      return spawnMap[`${r}-${c}`] === currentPlayer
-    })
+    const owner = buyableMap[`${row}-${col}`]
+    return owner === currentPlayer
   }
 
   // ==========================================
