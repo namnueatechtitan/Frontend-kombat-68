@@ -118,6 +118,10 @@ const handleSpawn = async () => {
 
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
 
+  const backendLogs = game.actionLogs ?? []
+  const displayedLogs =
+    backendLogs.length > 0 ? backendLogs : clientLogs
+
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
 
@@ -185,7 +189,7 @@ const handleSpawn = async () => {
                   backdrop-blur 
                   shadow-xl 
                   p-4">
-    <ActionLog logs={[...(game.actionLogs ?? []), ...clientLogs]} />
+    <ActionLog logs={displayedLogs} />
   </div>
 </div>
 
