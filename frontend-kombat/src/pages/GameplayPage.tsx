@@ -3,40 +3,12 @@ import GameBoard from "../components/GameBoard"
 import PlayerPanel from "../components/PlayerPanel"
 import ActionLog from "../components/ActionLog"
 import {
+  buyHex,
+  endTurn,
   getGameStatus,
   spawnMinion,
-  endTurn,
+  type GameStatus,
 } from "../api/gameApi"
-
-interface Minion {
-  ownerId: number
-  type: string
-  position: {
-    x: number
-    y: number
-  }
-}
-
-interface SpawnableHex {
-  row: number
-  col: number
-  ownerId: number
-}
-
-interface GameStatus {
-  currentPlayer: number
-  gameOver: boolean
-  winner: string
-  gameState: {
-    phase: string
-    minions: Minion[]
-    turnNumber: number
-    budgetManager: {
-      budget: number
-    }
-  }
-  spawnableHexes: SpawnableHex[]   // ✅ รับจาก backend
-}
 
 export default function GameplayPage() {
 
@@ -82,7 +54,7 @@ const handleSpawn = async () => {
   try {
     const result = await spawnMinion("FIGHTER", popup.row, popup.col)
 
-    if (result && result.success === true) {
+    if (result.success) {
       addLog(
         `Player ${game.currentPlayer} spawned at (${popup.row}, ${popup.col})`
       )
@@ -103,14 +75,7 @@ const handleSpawn = async () => {
     if (!popup || !game) return
 
     try {
-      await fetch("/api/game/buy-hex", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          row: popup.row,
-          col: popup.col
-        })
-      })
+      await buyHex(popup.row, popup.col)
 
       addLog(
         `Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`
@@ -155,8 +120,7 @@ const handleSpawn = async () => {
     )
   }
 
-  const { phase, minions, turnNumber, budgetManager } =
-    game.gameState
+  const { phase, turnNumber, budget, spawnsLeft } = game.gameState
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
@@ -167,6 +131,7 @@ const handleSpawn = async () => {
           <div>Turn: {turnNumber}</div>
           <div>Current Player: {game.currentPlayer}</div>
           <div>Phase: {phase}</div>
+          <div>Spawns Left: {spawnsLeft}</div>
         </div>
 
         <button
@@ -183,7 +148,8 @@ const handleSpawn = async () => {
         {/* BOARD */}
         <div className="absolute inset-0 flex items-center justify-center">
           <GameBoard
-            spawnableHexes={game.spawnableHexes}   // ✅ ใช้ของ backend
+            spawnableHexes={game.spawnableHexes}
+            buyableHexes={game.buyableHexes ?? []}
             phase={phase}
             currentPlayer={game.currentPlayer}
             onHexClick={(row, col, x, y) =>
@@ -197,7 +163,8 @@ const handleSpawn = async () => {
           <PlayerPanel
             playerId={1}
             currentPlayer={game.currentPlayer}
-            budget={budgetManager?.budget}
+            budget={budget}
+            spawnsLeft={spawnsLeft}
             phase={phase}
           />
         </div>
@@ -207,7 +174,8 @@ const handleSpawn = async () => {
           <PlayerPanel
             playerId={2}
             currentPlayer={game.currentPlayer}
-            budget={budgetManager?.budget}
+            budget={budget}
+            spawnsLeft={spawnsLeft}
             phase={phase}
           />
         </div>
@@ -247,7 +215,7 @@ const handleSpawn = async () => {
             </button>
           )}
 
-          {phase === "BUY_HEX" && (
+          {phase === "PLAYER_ACTION" && (
             <button
               onClick={handleBuyHex}
               className="block w-full mb-2 px-3 py-1 bg-yellow-500 rounded hover:bg-yellow-600"
@@ -256,7 +224,7 @@ const handleSpawn = async () => {
             </button>
           )}
 
-          {phase !== "FREE_SPAWN" && (
+          {phase === "PLAYER_ACTION" && (
             <button
               onClick={handleSpawn}
               className="block w-full mb-2 px-3 py-1 bg-purple-600 rounded hover:bg-purple-700"
