@@ -27,7 +27,6 @@ export const setCharacter = async (
     throw new Error(text || "Failed to set character")
   }
 
-  // backend return CharacterType (string)
   return res.json()
 }
 
@@ -153,11 +152,11 @@ export const startGame = async () => {
 
 
 // ======================================================
-// GAME STATE
+// NEW: GAME STATUS (ใช้ใน GameplayPage)
 // ======================================================
 
-export const getGameState = async () => {
-  const res = await fetch(`${BASE_URL}/state`)
+export const getGameStatus = async () => {
+  const res = await fetch(`${BASE_URL}/status`)
 
   if (!res.ok) {
     const text = await res.text()
@@ -165,4 +164,46 @@ export const getGameState = async () => {
   }
 
   return res.json()
+}
+
+
+// ======================================================
+// NEW: SPAWN MINION (ใช้ใน FREE_SPAWN + BUY)
+// ======================================================
+
+export const spawnMinion = async (
+  type: string,
+  row: number,
+  col: number
+) => {
+  const res = await fetch(`${BASE_URL}/spawn`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, row, col }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || "Spawn failed")
+  }
+
+  return await res.json()   
+}
+
+
+// ======================================================
+//  NEW: END TURN
+// ======================================================
+
+export const endTurn = async () => {
+  const res = await fetch(`${BASE_URL}/end-turn`, {
+    method: "POST",
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(text || "End turn failed")
+  }
+
+  return res.text()
 }

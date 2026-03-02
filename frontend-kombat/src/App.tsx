@@ -11,13 +11,13 @@ import SelectCharacterPage from "./pages/SelectCharacterPage"
 
 import StrategySetupHumanPage from "./pages/StrategySetupHumanPage"
 import StrategySetupDemonPage from "./pages/StrategySetupDemonPage"
-
+import GameplayPage from "./pages/GameplayPage"
 import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
 import SelectMinionDemonPage from "./pages/SelectMinionDemonPage"
 import PreBattlePage from "./pages/PreBattleSummaryPage"
+import { setMode, startGame } from "./api/gameApi" 
 
 import type { MinionData, MinionType } from "./types/MinionData"
-import { setMode } from "./api/gameApi"
 
 interface ConfiguredMinion extends MinionData {
   strategy: string
@@ -26,9 +26,6 @@ interface ConfiguredMinion extends MinionData {
 
 function App() {
 
-  // =========================
-  // PAGE STATE
-  // =========================
   const [page, setPage] = useState<
     | "start"
     | "config"
@@ -41,10 +38,6 @@ function App() {
     | "preBattle"
     | "game"
   >("start")
-
-  // =========================
-  // DUEL STATE
-  // =========================
 
   const [setupPlayer, setSetupPlayer] = useState<1 | 2>(1)
 
@@ -65,10 +58,6 @@ function App() {
 
   const currentMinions = minionsByPlayer[setupPlayer]
 
-  // =========================
-  // MODE
-  // =========================
-
   const handleModeConfirm = async (
     mode: "DUEL" | "SOLITAIRE" | "AUTO"
   ) => {
@@ -81,20 +70,12 @@ function App() {
     }
   }
 
-  // =========================
-  // REMOVE MINION
-  // =========================
-
   const handleRemove = (type: MinionType) => {
     setMinionsByPlayer(prev => ({
       ...prev,
       [setupPlayer]: prev[setupPlayer].filter(m => m.type !== type)
     }))
   }
-
-  // =========================
-  // FINAL CONFIRM
-  // =========================
 
   const handleFinalConfirm = async () => {
 
@@ -127,18 +108,12 @@ function App() {
         throw new Error(text || "Setup failed")
       }
 
-      // =============================
-      // FLOW CONTROL
-      // =============================
-
       if (isPlayer1) {
-        // ไปตั้งค่า Player 2
         setSetupPlayer(2)
         setCurrentFaction(null)
         setSelectedMinion(null)
         setPage("selectUI")
       } else {
-        // Player 2 เสร็จ → ไป PreBattle
         setCurrentFaction(null)
         setSelectedMinion(null)
         setPage("preBattle")
@@ -149,10 +124,6 @@ function App() {
       alert("Failed to complete setup")
     }
   }
-
-  // =========================
-  // BACK
-  // =========================
 
   const handleBack = () => {
     switch (page) {
@@ -254,8 +225,8 @@ function App() {
           onSelect={(minion) => {
             setSelectedMinion({
               ...minion,
-              strategy: minion.strategy || "", // Check if minion already has a strategy
-              defenseFactor: minion.defenseFactor || 1, // Set default defenseFactor if not present
+              strategy: minion.strategy || "",
+              defenseFactor: minion.defenseFactor || 1,
             })
             setPage("strategy")
           }}
@@ -281,6 +252,7 @@ function App() {
           onNext={handleFinalConfirm}
         />
       )}
+
       {page === "strategy" && selectedMinion && (
         currentFaction === "DEMON" ? (
           <StrategySetupDemonPage
@@ -320,14 +292,15 @@ function App() {
       {page === "preBattle" && (
         <PreBattlePage
           onBack={handleBack}
-          onConfirm={() => setPage("game")}
+          onConfirm={async () => {
+            await startGame()   
+            setPage("game")
+          }}
         />
       )}
 
       {page === "game" && (
-        <div className="w-full h-full flex items-center justify-center text-white text-4xl">
-          GAME PAGE (next step)
-        </div>
+        <GameplayPage />  
       )}
 
     </GameWrapper>
