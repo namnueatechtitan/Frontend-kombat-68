@@ -120,7 +120,7 @@ const handleSpawn = async () => {
     )
   }
 
-  const { phase, turnNumber, budget } = game.gameState
+  const { phase, turnNumber, budget, spawnsLeft } = game.gameState
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
@@ -131,6 +131,7 @@ const handleSpawn = async () => {
           <div>Turn: {turnNumber}</div>
           <div>Current Player: {game.currentPlayer}</div>
           <div>Phase: {phase}</div>
+          <div>Spawns Left: {spawnsLeft}</div>
         </div>
 
         <button
@@ -163,6 +164,7 @@ const handleSpawn = async () => {
             playerId={1}
             currentPlayer={game.currentPlayer}
             budget={budget}
+            spawnsLeft={spawnsLeft}
             phase={phase}
           />
         </div>
@@ -173,6 +175,7 @@ const handleSpawn = async () => {
             playerId={2}
             currentPlayer={game.currentPlayer}
             budget={budget}
+            spawnsLeft={spawnsLeft}
             phase={phase}
           />
         </div>

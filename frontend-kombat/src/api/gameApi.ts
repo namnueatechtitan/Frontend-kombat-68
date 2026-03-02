@@ -94,6 +94,7 @@ export interface GameStateDto {
   phase: TurnPhase
   minions: GameMinion[]
   budget: number
+  spawnsLeft: number
 }
 
 export interface GameStatus {
