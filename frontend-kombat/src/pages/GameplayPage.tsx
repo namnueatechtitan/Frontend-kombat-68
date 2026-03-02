@@ -14,7 +14,6 @@ export default function GameplayPage() {
 
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [logs, setLogs] = useState<string[]>([])
   const [popup, setPopup] = useState<{
     row: number
     col: number
@@ -41,9 +40,6 @@ export default function GameplayPage() {
     loadGame()
   }, [])
 
-  const addLog = (text: string) => {
-    setLogs(prev => [...prev, text])
-  }
 
   // ==========================
   // SPAWN
@@ -52,13 +48,7 @@ const handleSpawn = async () => {
   if (!popup || !game) return
 
   try {
-    const result = await spawnMinion("FIGHTER", popup.row, popup.col)
-
-    if (result.success) {
-      addLog(
-        `Player ${game.currentPlayer} spawned at (${popup.row}, ${popup.col})`
-      )
-    }
+    await spawnMinion("FIGHTER", popup.row, popup.col)
 
     setPopup(null)
     await loadGame()
@@ -77,10 +67,6 @@ const handleSpawn = async () => {
     try {
       await buyHex(popup.row, popup.col)
 
-      addLog(
-        `Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`
-      )
-
       setPopup(null)
       await loadGame()   // reload state จาก backend
     } catch {
@@ -93,10 +79,6 @@ const handleSpawn = async () => {
 
     try {
       await endTurn()
-
-      addLog(
-        `Player ${game.currentPlayer} ended turn`
-      )
 
       await loadGame()
     } catch {
@@ -189,7 +171,7 @@ const handleSpawn = async () => {
                   backdrop-blur 
                   shadow-xl 
                   p-4">
-    <ActionLog logs={logs} />
+    <ActionLog logs={game.actionLogs ?? []} />
   </div>
 </div>
 

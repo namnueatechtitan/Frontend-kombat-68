@@ -104,6 +104,7 @@ export interface GameStatus {
   gameState: GameStateDto
   spawnableHexes: SpawnableHex[]
   buyableHexes: SpawnableHex[]
+  actionLogs: string[]
 }
 
 export interface SpawnResponse {
