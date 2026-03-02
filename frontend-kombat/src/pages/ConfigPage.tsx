@@ -28,7 +28,7 @@ export default function ConfigPage({  onConfirm }: Props) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    getConfig()
+    getConfig<GameConfig>()
       .then((data) => {
         setConfig(data)
         setLoading(false)

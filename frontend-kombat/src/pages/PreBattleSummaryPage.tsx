@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
 import BackButton from "../components/BackButton"
 import ConfigBoard from "../components/ConfigBoard"
+import { getSetupSummary, startGame } from "../api/gameApi"
 
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
@@ -17,8 +18,7 @@ export default function PreBattlePage({ onBack, onConfirm }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/game/setup")
-      .then(res => res.json())
+    getSetupSummary()
       .then(setData)
       .catch(() => setError("Failed to load setup"))
       .finally(() => setLoading(false))
@@ -26,10 +26,7 @@ export default function PreBattlePage({ onBack, onConfirm }: Props) {
 
   async function handleConfirm() {
     try {
-      const res = await fetch("http://localhost:8080/api/game/start", {
-        method: "POST"
-      })
-      if (!res.ok) throw new Error(await res.text())
+      await startGame()
       onConfirm()
     } catch {
       alert("Failed to start game")

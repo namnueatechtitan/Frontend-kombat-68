@@ -1,209 +1,142 @@
-// ======================================================
-// BASE CONFIG
-// ======================================================
-
 const BASE_URL = "http://localhost:8080/api/game"
 
+type Character = "HUMAN" | "DEMON"
+type GameMode = "DUEL" | "SOLITAIRE" | "AUTO"
 
-// ======================================================
-// CHARACTER (รองรับ 2 ผู้เล่น)
-// ======================================================
-
-export const setCharacter = async (
-  playerId: number,
-  character: "HUMAN" | "DEMON"
-) => {
-  const res = await fetch(`${BASE_URL}/character`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      playerId,
-      character,
-    }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Failed to set character")
-  }
-
-  return res.json()
+interface RequestOptions extends Omit<RequestInit, "body"> {
+  body?: unknown
 }
 
+const apiRequest = async <T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> => {
+  const { body, headers, ...rest } = options
 
-// ======================================================
-// MODE
-// ======================================================
-
-export const setMode = async (
-  mode: "DUEL" | "SOLITAIRE" | "AUTO"
-) => {
-  const res = await fetch(`${BASE_URL}/mode`, {
-    method: "POST",
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...rest,
     headers: {
-      "Content-Type": "application/json",
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...headers,
     },
-    body: JSON.stringify({ mode }),
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(text || "Failed to set mode")
+    throw new Error(text || `Request failed: ${path}`)
   }
 
-  return res.json()
-}
-
-
-// ======================================================
-// CONFIG
-// ======================================================
-
-export const getConfig = async () => {
-  const res = await fetch(`${BASE_URL}/config`)
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Failed to load config")
+  const contentType = res.headers.get("content-type") ?? ""
+  if (contentType.includes("application/json")) {
+    return (await res.json()) as T
   }
 
-  return res.json()
+  return (await res.text()) as T
 }
 
-export const saveConfig = async (config: any) => {
-  const res = await fetch(`${BASE_URL}/config`, {
+export const setCharacter = (playerId: number, character: Character) =>
+  apiRequest<Record<string, unknown>>("/character", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(config),
+    body: { playerId, character },
   })
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Failed to save config")
-  }
-
-  return res.json()
-}
-
-
-// ======================================================
-// SETUP FULL (รองรับ playerId)
-// ======================================================
-
-export const setupFull = async (
-  playerId: number,
-  minions: {
-    type: string
-    defenseFactor: number
-    strategy: string
-  }[]
-) => {
-  const res = await fetch(`${BASE_URL}/setup/full/${playerId}`, {
+export const setMode = (mode: GameMode) =>
+  apiRequest<Record<string, unknown>>("/mode", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(minions),
+    body: { mode },
   })
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Setup failed")
-  }
+export const getConfig = <T = Record<string, number>>() => apiRequest<T>("/config")
 
-  return res.text()
+export const saveConfig = <T extends object>(config: T) =>
+  apiRequest<Record<string, unknown>>("/config", {
+    method: "POST",
+    body: config,
+  })
+
+export interface SetupMinionPayload {
+  type: string
+  defenseFactor: number
+  strategy: string
 }
 
+export const setupFull = (playerId: number, minions: SetupMinionPayload[]) =>
+  apiRequest<CommandResponse>(`/setup/full/${playerId}`, {
+    method: "POST",
+    body: minions,
+  })
 
-// ======================================================
-// SETUP SUMMARY
-// ======================================================
+export const getSetupSummary = () => apiRequest<Record<string, unknown>>("/setup")
 
-export const getSetupSummary = async () => {
-  const res = await fetch(`${BASE_URL}/setup`)
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Failed to load setup summary")
-  }
-
-  return res.json()
-}
-
-
-// ======================================================
-// START GAME
-// ======================================================
-
-export const startGame = async () => {
-  const res = await fetch(`${BASE_URL}/start`, {
+export const startGame = () =>
+  apiRequest<CommandResponse>("/start", {
     method: "POST",
   })
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Failed to start game")
-  }
-
-  return res.text()
-}
-
-
-// ======================================================
-// NEW: GAME STATUS (ใช้ใน GameplayPage)
-// ======================================================
-
-export const getGameStatus = async () => {
-  const res = await fetch(`${BASE_URL}/status`)
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Game not started")
-  }
-
-  return res.json()
-}
-
-
-// ======================================================
-// NEW: SPAWN MINION (ใช้ใน FREE_SPAWN + BUY)
-// ======================================================
-
-export const spawnMinion = async (
-  type: string,
-  row: number,
+export interface SpawnableHex {
+  row: number
   col: number
-) => {
-  const res = await fetch(`${BASE_URL}/spawn`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type, row, col }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "Spawn failed")
-  }
-
-  return await res.json()   
+  ownerId: number
 }
 
+export type TurnPhase = "FREE_SPAWN" | "PLAYER_ACTION" | "EXECUTION" | "END"
 
-// ======================================================
-//  NEW: END TURN
-// ======================================================
+export interface GameMinion {
+  ownerId: number
+  type: string
+  x: number
+  y: number
+}
 
-export const endTurn = async () => {
-  const res = await fetch(`${BASE_URL}/end-turn`, {
+export interface GameStateDto {
+  turnNumber: number
+  phase: TurnPhase
+  minions: GameMinion[]
+  budget: number
+}
+
+export interface GameStatus {
+  currentPlayer: number
+  gameOver: boolean
+  winner: string
+  gameState: GameStateDto
+  spawnableHexes: SpawnableHex[]
+  buyableHexes: SpawnableHex[]
+}
+
+export interface SpawnResponse {
+  success: boolean
+  phase: TurnPhase
+  currentPlayer: number
+  turn: number
+}
+
+export interface BuyHexResponse {
+  success: boolean
+  phase: TurnPhase
+}
+
+export interface CommandResponse {
+  message: string
+  phase?: string
+}
+
+export const getGameStatus = () => apiRequest<GameStatus>("/status")
+
+export const spawnMinion = (type: string, row: number, col: number) =>
+  apiRequest<SpawnResponse>("/spawn", {
     method: "POST",
+    body: { type, row, col },
   })
 
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(text || "End turn failed")
-  }
+export const buyHex = (row: number, col: number) =>
+  apiRequest<BuyHexResponse>("/buy-hex", {
+    method: "POST",
+    body: { row, col },
+  })
 
-  return res.text()
-}
+export const endTurn = () =>
+  apiRequest<CommandResponse>("/end-turn", {
+    method: "POST",
+  })
