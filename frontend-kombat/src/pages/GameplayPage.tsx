@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import GameBoard from "../components/GameBoard"
 import PlayerPanel from "../components/PlayerPanel"
 import ActionLog from "../components/ActionLog"
@@ -15,6 +15,7 @@ export default function GameplayPage() {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [clientLogs, setClientLogs] = useState<string[]>([])
+  const lastBackendLogCountRef = useRef(0)
   const [popup, setPopup] = useState<{
     row: number
     col: number
@@ -29,6 +30,13 @@ export default function GameplayPage() {
   const loadGame = async () => {
     try {
       const data = await getGameStatus()
+
+      const backendLogCount = data.actionLogs?.length ?? 0
+      if (backendLogCount > lastBackendLogCountRef.current) {
+        setClientLogs([])
+      }
+      lastBackendLogCountRef.current = backendLogCount
+
       setGame(data)
     } catch (err) {
       console.error(err)
@@ -119,8 +127,7 @@ const handleSpawn = async () => {
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
 
   const backendLogs = game.actionLogs ?? []
-  const displayedLogs =
-    backendLogs.length > 0 ? backendLogs : clientLogs
+  const displayedLogs = [...backendLogs, ...clientLogs]
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
