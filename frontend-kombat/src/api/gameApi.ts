@@ -133,6 +133,16 @@ export interface CommandResponse {
   phase?: string
 }
 
+export interface EndTurnResponse {
+  message: "Game finished" | "Turn ended"
+  phase: string
+  turnPhase: TurnPhase
+  gameOver: boolean
+  winner: "P1" | "P2" | "TIE" | "ONGOING"
+  currentPlayer: number
+  actionLogs: string[]
+}
+
 export const getGameStatus = () => apiRequest<GameStatus>("/status")
 
 export const spawnMinion = (type: string, row: number, col: number) =>
@@ -148,6 +158,6 @@ export const buyHex = (row: number, col: number) =>
   })
 
 export const endTurn = () =>
-  apiRequest<CommandResponse>("/end-turn", {
+  apiRequest<EndTurnResponse>("/end-turn", {
     method: "POST",
   })

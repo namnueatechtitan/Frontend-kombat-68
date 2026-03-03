@@ -288,7 +288,7 @@ function App() {
       )}
 
       {page === "game" && (
-        <GameplayPage />  
+        <GameplayPage onRestart={() => setPage("mode")} />
       )}
 
     </GameWrapper>
