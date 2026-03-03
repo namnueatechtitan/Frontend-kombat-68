@@ -12,10 +12,16 @@ import {
   type GameStatus,
 } from "../api/gameApi"
 
+interface ToastState {
+  type: "error" | "success"
+  message: string
+}
+
 export default function GameplayPage() {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
+  const [toast, setToast] = useState<ToastState | null>(null)
   const lastBackendLogSignatureRef = useRef("")
   const [popup, setPopup] = useState<{
     row: number
@@ -25,6 +31,28 @@ export default function GameplayPage() {
   } | null>(null)
 
   const [selectingType, setSelectingType] = useState(false)
+  const [isGameFinished, setIsGameFinished] = useState(false)
+
+  const showToast = (message: string) => {
+    setToast({ type: "error", message })
+  }
+
+  const syncGameFinishedState = ({
+    gameOver,
+    phase,
+  }: {
+    gameOver: boolean
+    phase?: string
+  }) => {
+    const finished = Boolean(gameOver || phase === "FINISHED")
+
+    setIsGameFinished(finished)
+
+    if (finished) {
+      setPopup(null)
+      setSelectingType(false)
+    }
+  }
 
   const loadGame = async () => {
     try {
@@ -42,8 +70,13 @@ export default function GameplayPage() {
 
       lastBackendLogSignatureRef.current = backendLogSignature
       setGame(data)
+      syncGameFinishedState({
+        gameOver: data.gameOver,
+        phase: data.phase,
+      })
     } catch (err) {
       console.error(err)
+      showToast("ไม่สามารถโหลดสถานะเกมได้ กรุณาลองใหม่อีกครั้ง")
     } finally {
       setLoading(false)
     }
@@ -53,12 +86,21 @@ export default function GameplayPage() {
     loadGame()
   }, [])
 
+  useEffect(() => {
+    if (!toast) return
+
+    const timer = window.setTimeout(() => setToast(null), 3500)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
   const appendTimelineLog = (text: string) => {
     setTimelineLogs((prev) => [...prev, text])
   }
 
+  const isGameplayDisabled = isGameFinished || game?.gameOver || game?.phase === "FINISHED"
+
   const handleSpawn = async (type: string) => {
-    if (!popup || !game) return
+    if (!popup || !game || isGameplayDisabled) return
 
     try {
       await spawnMinion(type, popup.row, popup.col)
@@ -74,12 +116,12 @@ export default function GameplayPage() {
 
       await loadGame()
     } catch {
-      alert("Spawn failed")
+      showToast("สั่ง Spawn ไม่สำเร็จ กรุณาลองใหม่")
     }
   }
 
   const handleBuyHex = async () => {
-    if (!popup || !game) return
+    if (!popup || !game || isGameplayDisabled) return
 
     try {
       await buyHex(popup.row, popup.col)
@@ -91,17 +133,24 @@ export default function GameplayPage() {
       setPopup(null)
       await loadGame()
     } catch {
-      alert("Buy hex failed")
+      showToast("ซื้อ Hex ไม่สำเร็จ กรุณาลองใหม่")
     }
   }
 
   const handleEndTurn = async () => {
-    if (!game) return
+    if (!game || isGameplayDisabled) return
+
     try {
-      await endTurn()
+      const response = await endTurn()
+
+      if (response.actionLogs?.length) {
+        setTimelineLogs((prev) => [...prev, ...response.actionLogs])
+      }
+
+      syncGameFinishedState({ gameOver: response.gameOver, phase: response.phase })
       await loadGame()
     } catch {
-      alert("End turn failed")
+      showToast("จบเทิร์นไม่สำเร็จ กรุณาตรวจสอบเครือข่ายแล้วลองอีกครั้ง")
     }
   }
 
@@ -151,7 +200,8 @@ export default function GameplayPage() {
 
               <button
                 onClick={handleEndTurn}
-                className="px-5 sm:px-7 py-2 rounded-full font-bold tracking-[0.2em] text-sm bg-gradient-to-r from-orange-400 to-yellow-300 text-black hover:brightness-110 transition"
+                disabled={isGameplayDisabled}
+                className="px-5 sm:px-7 py-2 rounded-full font-bold tracking-[0.2em] text-sm bg-gradient-to-r from-orange-400 to-yellow-300 text-black hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ENDTURN
               </button>
@@ -173,12 +223,13 @@ export default function GameplayPage() {
 
               <div className="order-1 lg:order-2 flex items-center justify-center min-w-0">
                 <GameBoard
-                  spawnableHexes={game.spawnableHexes}
-                  buyableHexes={game.buyableHexes ?? []}
+                  spawnableHexes={isGameplayDisabled ? [] : game.spawnableHexes}
+                  buyableHexes={isGameplayDisabled ? [] : game.buyableHexes ?? []}
                   minions={game.gameState.minions ?? []}
                   phase={phase}
                   currentPlayer={game.currentPlayer}
                   onHexClick={(row, col, x, y) => {
+                    if (isGameplayDisabled) return
                     setSelectingType(false)
                     setPopup({ row, col, x, y })
                   }}
@@ -204,7 +255,13 @@ export default function GameplayPage() {
         </div>
       </div>
 
-      {popup && (
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[70] rounded-lg border border-red-300/30 bg-red-950/90 px-4 py-2 text-sm text-red-100 shadow-lg">
+          {toast.message}
+        </div>
+      )}
+
+      {popup && !isGameplayDisabled && (
         <div
           className="fixed bg-gray-900 border border-gray-600 p-4 rounded shadow-xl z-50"
           style={{ left: popup.x, top: popup.y }}
@@ -264,6 +321,7 @@ export default function GameplayPage() {
           </button>
         </div>
       )}
+
     </div>
   )
 }
