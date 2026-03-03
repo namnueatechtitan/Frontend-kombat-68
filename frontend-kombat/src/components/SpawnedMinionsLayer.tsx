@@ -68,8 +68,8 @@ export default function SpawnedMinionsLayer({
     const minionsByHex: Record<string, BoardMinion[]> = {}
 
     minions.forEach((minion) => {
-      const row = minion.row ?? minion.y
-      const col = minion.col ?? minion.x
+      const row = minion.row ?? minion.x
+      const col = minion.col ?? minion.y
 
       if (row === undefined || col === undefined) return
 
