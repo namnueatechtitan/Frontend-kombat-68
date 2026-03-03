@@ -108,6 +108,8 @@ export interface GameStatus {
   currentPlayer: number
   gameOver: boolean
   winner: string
+  phase?: string
+  turnPhase?: TurnPhase
   gameState: GameStateDto
   spawnableHexes: SpawnableHex[]
   buyableHexes: SpawnableHex[]
@@ -149,6 +151,6 @@ export const buyHex = (row: number, col: number) =>
   })
 
 export const endTurn = () =>
-  apiRequest<CommandResponse>("/end-turn", {
+  apiRequest<EndTurnResponse>("/end-turn", {
     method: "POST",
   })
