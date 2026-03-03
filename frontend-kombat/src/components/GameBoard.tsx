@@ -38,7 +38,7 @@ export default function GameBoard({
 
   const GOLD = "#FFD700"
 
-  const hexSize = 50
+  const hexSize = 45
   const hexGap = 6
   const hexWidth = Math.sqrt(3) * hexSize
   const hexHeight = 2 * hexSize

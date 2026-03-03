@@ -145,7 +145,7 @@ export default function SpawnedMinionsLayer({
         const imageSrc = resolveImageByType(minion.type, minion.ownerId)
         if (!imageSrc) return null
 
-        const size = 75
+        const size = 70
         const offsetStep = 10
         const offset =
           (minion.stackIndex - (minion.stackSize - 1) / 2) * offsetStep
