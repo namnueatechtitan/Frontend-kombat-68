@@ -50,18 +50,13 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
   }
 
   const maybeSetEndGame = ({
-    gameOver,
     phase,
-    turnPhase,
     winner: winnerCode,
   }: {
-    gameOver: boolean
     phase?: string
-    turnPhase?: string
     winner?: string
   }) => {
-    const hasWinner = Boolean(winnerCode && winnerCode !== "ONGOING")
-    const shouldOpen = Boolean(gameOver || phase === "FINISHED" || (turnPhase === "END" && hasWinner))
+    const shouldOpen = phase === "FINISHED"
 
     if (!shouldOpen) {
       return
@@ -91,9 +86,7 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
       lastBackendLogSignatureRef.current = backendLogSignature
       setGame(data)
       maybeSetEndGame({
-        gameOver: data.gameOver,
         phase: data.phase,
-        turnPhase: data.turnPhase ?? data.gameState?.phase,
         winner: data.winner,
       })
     } catch (err) {
@@ -169,7 +162,7 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
         setTimelineLogs((prev) => [...prev, ...response.actionLogs])
       }
 
-      maybeSetEndGame(response)
+      maybeSetEndGame({ phase: response.phase, winner: response.winner })
       await loadGame()
     } catch {
       showToast("จบเทิร์นไม่สำเร็จ กรุณาตรวจสอบเครือข่ายแล้วลองอีกครั้ง")
