@@ -60,7 +60,8 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
     turnPhase?: string
     winner?: string
   }) => {
-    const shouldOpen = Boolean(gameOver || phase === "FINISHED" || turnPhase === "END")
+    const hasWinner = Boolean(winnerCode && winnerCode !== "ONGOING")
+    const shouldOpen = Boolean(gameOver || phase === "FINISHED" || (turnPhase === "END" && hasWinner))
 
     if (!shouldOpen) {
       return
@@ -91,7 +92,8 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
       setGame(data)
       maybeSetEndGame({
         gameOver: data.gameOver,
-        phase: data.gameState?.phase,
+        phase: data.phase,
+        turnPhase: data.turnPhase ?? data.gameState?.phase,
         winner: data.winner,
       })
     } catch (err) {
@@ -117,7 +119,7 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
     setTimelineLogs((prev) => [...prev, text])
   }
 
-  const isGameplayDisabled = isGameFinished || game?.gameOver || game?.gameState.phase === "END" || game?.gameState.phase === "EXECUTION"
+  const isGameplayDisabled = isGameFinished || game?.gameOver || game?.phase === "FINISHED"
 
   const handleSpawn = async (type: string) => {
     if (!popup || !game || isGameplayDisabled) return

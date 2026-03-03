@@ -108,6 +108,8 @@ export interface GameStatus {
   currentPlayer: number
   gameOver: boolean
   winner: string
+  phase?: string
+  turnPhase?: TurnPhase
   gameState: GameStateDto
   spawnableHexes: SpawnableHex[]
   buyableHexes: SpawnableHex[]
