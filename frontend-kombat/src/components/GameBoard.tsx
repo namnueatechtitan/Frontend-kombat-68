@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import type { TurnPhase } from "../api/gameApi"
+import SpawnedMinionsLayer, { type BoardMinion } from "./SpawnedMinionsLayer"
 
 interface SpawnableHex {
   row: number
@@ -10,6 +11,7 @@ interface SpawnableHex {
 interface Props {
   spawnableHexes: SpawnableHex[]
   buyableHexes: SpawnableHex[]
+  minions: BoardMinion[]
   currentPlayer: number
   phase: TurnPhase
   onHexClick: (
@@ -23,15 +25,11 @@ interface Props {
 export default function GameBoard({
   spawnableHexes,
   buyableHexes,
+  minions,
   currentPlayer,
   phase,
   onHexClick,
 }: Props) {
-
-  // ==========================================
-  // PLAYER COLORS
-  // ==========================================
-
   const playerColors: Record<number, string> = {
     1: "#B1202B",
     2: "#6E3C82",
@@ -39,18 +37,10 @@ export default function GameBoard({
 
   const GOLD = "#FFD700"
 
-  // ==========================================
-  // HEX CONFIG
-  // ==========================================
-
   const hexSize = 35
   const hexWidth = Math.sqrt(3) * hexSize
   const hexHeight = 2 * hexSize
   const verticalSpacing = hexSize * 1.5
-
-  // ==========================================
-  // SPAWN MAP
-  // ==========================================
 
   const spawnMap = useMemo(() => {
     const map: Record<string, number> = {}
@@ -59,10 +49,6 @@ export default function GameBoard({
     })
     return map
   }, [spawnableHexes])
-
-  // ==========================================
-  // HEX PATH GENERATOR
-  // ==========================================
 
   const getHexPath = (x: number, y: number) => {
     const points = [
@@ -74,16 +60,8 @@ export default function GameBoard({
       [x, y + hexHeight / 4],
     ]
 
-    return (
-      "M" +
-      points.map((p) => p.join(",")).join(" L") +
-      " Z"
-    )
+    return "M" + points.map((p) => p.join(",")).join(" L") + " Z"
   }
-
-  // ==========================================
-  // GENERATE BOARD
-  // ==========================================
 
   const paths = useMemo(() => {
     const arr: {
@@ -94,10 +72,7 @@ export default function GameBoard({
 
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
-        const xOffset =
-          col * hexWidth +
-          (row % 2 ? hexWidth / 2 : 0)
-
+        const xOffset = col * hexWidth + (row % 2 ? hexWidth / 2 : 0)
         const yOffset = row * verticalSpacing
 
         arr.push({
@@ -109,11 +84,7 @@ export default function GameBoard({
     }
 
     return arr
-  }, [])
-
-  // ==========================================
-  // BUYABLE MAP (from backend)
-  // ==========================================
+  }, [hexHeight, hexWidth, verticalSpacing])
 
   const buyableMap = useMemo(() => {
     const map: Record<string, number> = {}
@@ -130,19 +101,13 @@ export default function GameBoard({
     return owner === currentPlayer
   }
 
-  // ==========================================
-  // COLOR LOGIC
-  // ==========================================
-
   const getFillColor = (row: number, col: number) => {
     const key = `${row}-${col}`
 
-    // spawn zone
     if (spawnMap[key]) {
       return playerColors[spawnMap[key]]
     }
 
-    // buyable highlight
     if (isBuyable(row, col)) {
       return GOLD
     }
@@ -150,18 +115,9 @@ export default function GameBoard({
     return "#1E1E1E"
   }
 
-  // ==========================================
-  // RENDER
-  // ==========================================
-
   return (
     <div className="flex justify-center">
-      <svg
-        width="700"
-        height="700"
-        viewBox="0 0 700 700"
-        className="select-none"
-      >
+      <svg width="700" height="700" viewBox="0 0 700 700" className="select-none">
         {paths.map(({ d, row, col }) => {
           const key = `${row}-${col}`
 
@@ -173,17 +129,17 @@ export default function GameBoard({
               stroke="#2A2A2A"
               strokeWidth={2}
               className="cursor-pointer transition duration-200 hover:brightness-110"
-              onClick={(e) =>
-                onHexClick(
-                  row,
-                  col,
-                  e.clientX,
-                  e.clientY
-                )
-              }
+              onClick={(e) => onHexClick(row, col, e.clientX, e.clientY)}
             />
           )
         })}
+
+        <SpawnedMinionsLayer
+          minions={minions}
+          hexWidth={hexWidth}
+          hexHeight={hexHeight}
+          verticalSpacing={verticalSpacing}
+        />
       </svg>
     </div>
   )
