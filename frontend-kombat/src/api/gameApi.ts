@@ -135,15 +135,6 @@ export interface CommandResponse {
   phase?: string
 }
 
-export interface EndTurnResponse {
-  message: "Game finished" | "Turn ended"
-  phase: string
-  turnPhase: TurnPhase
-  gameOver: boolean
-  winner: "P1" | "P2" | "TIE" | "ONGOING"
-  currentPlayer: number
-  actionLogs: string[]
-}
 
 export const getGameStatus = () => apiRequest<GameStatus>("/status")
 
