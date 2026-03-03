@@ -14,7 +14,7 @@ export default function GameplayPage() {
 
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [clientLogs, setClientLogs] = useState<string[]>([])
+  const [timelineLogs, setTimelineLogs] = useState<string[]>([])
   const lastBackendLogSignatureRef = useRef("")
   const [popup, setPopup] = useState<{
     row: number
@@ -35,7 +35,7 @@ export default function GameplayPage() {
       const backendLogSignature = JSON.stringify(backendLogs)
 
       if (backendLogs.length > 0 && backendLogSignature !== lastBackendLogSignatureRef.current) {
-        setClientLogs([])
+        setTimelineLogs((prev) => [...prev, ...backendLogs])
       }
       lastBackendLogSignatureRef.current = backendLogSignature
 
@@ -51,8 +51,8 @@ export default function GameplayPage() {
     loadGame()
   }, [])
 
-  const addClientLog = (text: string) => {
-    setClientLogs((prev) => [...prev, text])
+  const appendTimelineLog = (text: string) => {
+    setTimelineLogs((prev) => [...prev, text])
   }
 
   // ==========================
@@ -64,7 +64,7 @@ const handleSpawn = async () => {
   try {
     await spawnMinion("FIGHTER", popup.row, popup.col)
 
-    addClientLog(
+    appendTimelineLog(
       game.gameState.phase === "FREE_SPAWN"
         ? `Player ${game.currentPlayer} spawned free at (${popup.row}, ${popup.col})`
         : `Player ${game.currentPlayer} bought minion at (${popup.row}, ${popup.col})`
@@ -87,7 +87,7 @@ const handleSpawn = async () => {
     try {
       await buyHex(popup.row, popup.col)
 
-      addClientLog(`Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`)
+      appendTimelineLog(`Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`)
 
       setPopup(null)
       await loadGame()   // reload state จาก backend
@@ -101,8 +101,6 @@ const handleSpawn = async () => {
 
     try {
       await endTurn()
-
-      addClientLog(`Player ${game.currentPlayer} ended turn`)
 
       await loadGame()
     } catch {
@@ -128,8 +126,7 @@ const handleSpawn = async () => {
 
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
 
-  const backendLogs = game.actionLogs ?? []
-  const displayedLogs = [...clientLogs, ...backendLogs]
+  const displayedLogs = timelineLogs
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
