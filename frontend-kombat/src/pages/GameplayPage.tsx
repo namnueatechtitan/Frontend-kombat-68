@@ -173,6 +173,8 @@ export default function GameplayPage() {
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
   const p1Economy = game.playerEconomy?.["1"]
   const p2Economy = game.playerEconomy?.["2"]
+  const latestLogs = timelineLogs.slice(-5).reverse()
+  const winnerMessage = winnerTextByCode[winner] ?? "จบเกม"
 
   return (
     <div
