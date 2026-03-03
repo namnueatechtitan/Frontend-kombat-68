@@ -12,22 +12,12 @@ import {
   type GameStatus,
 } from "../api/gameApi"
 
-interface GameplayPageProps {
-  onRestart: () => void
-}
-
 interface ToastState {
   type: "error" | "success"
   message: string
 }
 
-const winnerTextByCode: Record<string, string> = {
-  P1: "ผู้ชนะ: Player 1",
-  P2: "ผู้ชนะ: Player 2",
-  TIE: "ผลการแข่งขัน: เสมอ",
-}
-
-export default function GameplayPage({ onRestart }: GameplayPageProps) {
+export default function GameplayPage() {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
@@ -41,32 +31,27 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
   } | null>(null)
 
   const [selectingType, setSelectingType] = useState(false)
-  const [isGameOverModalOpen, setIsGameOverModalOpen] = useState(false)
   const [isGameFinished, setIsGameFinished] = useState(false)
-  const [winner, setWinner] = useState("ONGOING")
 
   const showToast = (message: string) => {
     setToast({ type: "error", message })
   }
 
-  const maybeSetEndGame = ({
+  const syncGameFinishedState = ({
+    gameOver,
     phase,
-    winner: winnerCode,
   }: {
+    gameOver: boolean
     phase?: string
-    winner?: string
   }) => {
-    const shouldOpen = phase === "FINISHED"
+    const finished = Boolean(gameOver || phase === "FINISHED")
 
-    if (!shouldOpen) {
-      return
+    setIsGameFinished(finished)
+
+    if (finished) {
+      setPopup(null)
+      setSelectingType(false)
     }
-
-    setWinner(winnerCode ?? "ONGOING")
-    setIsGameFinished(true)
-    setIsGameOverModalOpen((prev) => prev || true)
-    setPopup(null)
-    setSelectingType(false)
   }
 
   const loadGame = async () => {
@@ -85,9 +70,9 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
 
       lastBackendLogSignatureRef.current = backendLogSignature
       setGame(data)
-      maybeSetEndGame({
+      syncGameFinishedState({
+        gameOver: data.gameOver,
         phase: data.phase,
-        winner: data.winner,
       })
     } catch (err) {
       console.error(err)
@@ -162,7 +147,7 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
         setTimelineLogs((prev) => [...prev, ...response.actionLogs])
       }
 
-      maybeSetEndGame({ phase: response.phase, winner: response.winner })
+      syncGameFinishedState({ gameOver: response.gameOver, phase: response.phase })
       await loadGame()
     } catch {
       showToast("จบเทิร์นไม่สำเร็จ กรุณาตรวจสอบเครือข่ายแล้วลองอีกครั้ง")
@@ -339,58 +324,6 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
         </div>
       )}
 
-      {isGameOverModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 backdrop-blur-sm px-4">
-          <div className="w-full max-w-2xl rounded-2xl border border-yellow-300/40 bg-gradient-to-b from-[#24150c] via-[#1a120c] to-[#120d09] p-6 shadow-[0_0_30px_rgba(255,174,67,0.3)]">
-            <p className="text-3xl font-extrabold tracking-widest text-yellow-300 uppercase">Game Over</p>
-            <p className="mt-2 text-lg text-orange-100">{winnerMessage}</p>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              <div className="rounded-xl border border-orange-200/20 bg-black/30 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-orange-200/80">Latest Action Logs</p>
-                <ul className="mt-3 space-y-2 text-sm text-white/90">
-                  {latestLogs.length > 0 ? (
-                    latestLogs.map((log, idx) => (
-                      <li key={`${log}-${idx}`} className="rounded bg-black/40 px-2 py-1">• {log}</li>
-                    ))
-                  ) : (
-                    <li className="text-white/60">No recent logs</li>
-                  )}
-                </ul>
-              </div>
-
-              <div className="rounded-xl border border-orange-200/20 bg-black/30 p-4">
-                <p className="text-xs uppercase tracking-[0.25em] text-orange-200/80">Economy Summary</p>
-                <div className="mt-3 space-y-3 text-sm text-white/90">
-                  {[p1Economy, p2Economy].map((economy, index) => (
-                    <div key={index} className="rounded bg-black/40 px-3 py-2">
-                      <p className="font-semibold text-yellow-200">Player {index + 1}</p>
-                      <p>Budget: {economy?.budget ?? 0}</p>
-                      <p>Spawns Left: {economy?.spawnsLeft ?? 0}</p>
-                      <p>Interest: {economy?.lastInterest ?? 0}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button
-                onClick={() => setIsGameOverModalOpen(false)}
-                className="rounded-lg border border-orange-300/40 px-4 py-2 text-sm font-semibold text-orange-100 hover:bg-orange-400/10"
-              >
-                ปิด
-              </button>
-              <button
-                onClick={onRestart}
-                className="rounded-lg bg-gradient-to-r from-orange-400 to-yellow-300 px-4 py-2 text-sm font-bold text-black hover:brightness-110"
-              >
-                เล่นใหม่
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
