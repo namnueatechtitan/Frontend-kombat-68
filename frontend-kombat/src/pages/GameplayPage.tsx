@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import GameBoard from "../components/GameBoard"
 import PlayerPanel from "../components/PlayerPanel"
 import ActionLog from "../components/ActionLog"
+import demonSetupBg from "../assets/images/demonsetup.png"
+import logoImage from "../assets/images/logo.png"
 import {
   buyHex,
   endTurn,
@@ -22,12 +24,7 @@ export default function GameplayPage() {
     y: number
   } | null>(null)
 
-  // ✅ NEW: ควบคุมว่ากำลังเลือก type อยู่ไหม
   const [selectingType, setSelectingType] = useState(false)
-
-  // ==========================
-  // LOAD GAME
-  // ==========================
 
   const loadGame = async () => {
     try {
@@ -60,10 +57,6 @@ export default function GameplayPage() {
     setTimelineLogs((prev) => [...prev, text])
   }
 
-  // ==========================
-  // SPAWN
-  // ==========================
-
   const handleSpawn = async (type: string) => {
     if (!popup || !game) return
 
@@ -76,7 +69,6 @@ export default function GameplayPage() {
           : `Player ${game.currentPlayer} bought ${type} at (${popup.row}, ${popup.col})`
       )
 
-      // reset
       setSelectingType(false)
       setPopup(null)
 
@@ -85,10 +77,6 @@ export default function GameplayPage() {
       alert("Spawn failed")
     }
   }
-
-  // ==========================
-  // BUY HEX
-  // ==========================
 
   const handleBuyHex = async () => {
     if (!popup || !game) return
@@ -119,7 +107,7 @@ export default function GameplayPage() {
 
   if (loading) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-white">
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#111] text-white">
         Loading...
       </div>
     )
@@ -127,7 +115,7 @@ export default function GameplayPage() {
 
   if (!game) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-red-500">
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#111] text-red-500">
         Failed to load game
       </div>
     )
@@ -138,76 +126,84 @@ export default function GameplayPage() {
   const p2Economy = game.playerEconomy?.["2"]
 
   return (
-    <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
+    <div
+      className="min-h-screen w-full text-white bg-[#111] bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${demonSetupBg})` }}
+    >
+      <div className="min-h-screen bg-black/45">
+        <div className="min-h-screen max-w-[1400px] mx-auto px-3 sm:px-5 lg:px-8 py-4 sm:py-6 flex flex-col justify-center gap-4 lg:gap-6">
+          <div className="w-full rounded-xl border border-orange-400/40 bg-black/55 backdrop-blur-sm px-4 lg:px-6 py-3 lg:py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-4 min-w-0">
+                <img src={logoImage} alt="Game logo" className="w-12 h-12 lg:w-14 lg:h-14 object-contain" />
+                <div className="text-sm sm:text-base lg:text-lg font-bold tracking-wide text-yellow-300">
+                  TURN {turnNumber} · PLAYER {game.currentPlayer}
+                </div>
+              </div>
 
-      {/* TOP BAR */}
-      <div className="flex justify-between items-center mt-4 mb-10 px-8 py-5 border-b border-gray-900">
-        <div className="flex gap-8">
-          <div>Turn: {turnNumber}</div>
-          <div>Current Player: {game.currentPlayer}</div>
-          <div>Phase: {phase}</div>
-          <div>Spawns Left: {spawnsLeft}</div>
-          <div>
-            Last Interest:{" "}
-            {game.playerEconomy?.[String(game.currentPlayer)]?.lastInterest ?? 0}
+              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm lg:text-base text-white/90">
+                <div>Phase: {phase}</div>
+                <div>Spawns Left: {spawnsLeft}</div>
+                <div>
+                  Last Interest: {game.playerEconomy?.[String(game.currentPlayer)]?.lastInterest ?? 0}
+                </div>
+              </div>
+
+              <button
+                onClick={handleEndTurn}
+                className="px-5 sm:px-7 py-2 rounded-full font-bold tracking-[0.2em] text-sm bg-gradient-to-r from-orange-400 to-yellow-300 text-black hover:brightness-110 transition"
+              >
+                ENDTURN
+              </button>
+            </div>
+          </div>
+
+          <div className="w-full flex items-center justify-center">
+            <div className="w-full grid grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 lg:gap-6">
+              <div className="order-2 lg:order-1 flex justify-center lg:justify-end">
+                <PlayerPanel
+                  playerId={1}
+                  currentPlayer={game.currentPlayer}
+                  budget={p1Economy?.budget ?? budget}
+                  spawnsLeft={p1Economy?.spawnsLeft ?? spawnsLeft}
+                  lastInterest={p1Economy?.lastInterest}
+                  phase={phase}
+                />
+              </div>
+
+              <div className="order-1 lg:order-2 flex items-center justify-center min-w-0">
+                <GameBoard
+                  spawnableHexes={game.spawnableHexes}
+                  buyableHexes={game.buyableHexes ?? []}
+                  minions={game.gameState.minions ?? []}
+                  phase={phase}
+                  currentPlayer={game.currentPlayer}
+                  onHexClick={(row, col, x, y) => {
+                    setSelectingType(false)
+                    setPopup({ row, col, x, y })
+                  }}
+                />
+              </div>
+
+              <div className="order-3 flex justify-center lg:justify-start">
+                <PlayerPanel
+                  playerId={2}
+                  currentPlayer={game.currentPlayer}
+                  budget={p2Economy?.budget}
+                  spawnsLeft={p2Economy?.spawnsLeft}
+                  lastInterest={p2Economy?.lastInterest}
+                  phase={phase}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full rounded-xl border border-yellow-500/30 bg-black/55 backdrop-blur-sm shadow-xl p-3 sm:p-4 min-h-[180px]">
+            <ActionLog logs={timelineLogs} />
           </div>
         </div>
-
-        <button
-          onClick={handleEndTurn}
-          className="px-6 py-2 bg-orange-500 rounded hover:bg-orange-600 transition"
-        >
-          ENDTURN
-        </button>
       </div>
 
-      {/* MAIN */}
-      <div className="relative flex-1 px-8 py-6">
-
-        <div className="absolute inset-0 flex items-center justify-center">
-          <GameBoard
-            spawnableHexes={game.spawnableHexes}
-            buyableHexes={game.buyableHexes ?? []}
-            phase={phase}
-            currentPlayer={game.currentPlayer}
-            onHexClick={(row, col, x, y) => {
-              setSelectingType(false)
-              setPopup({ row, col, x, y })
-            }}
-          />
-        </div>
-
-        <div className="absolute left-8 top-1/2 -translate-y-1/2">
-          <PlayerPanel
-            playerId={1}
-            currentPlayer={game.currentPlayer}
-            budget={p1Economy?.budget ?? budget}
-            spawnsLeft={p1Economy?.spawnsLeft ?? spawnsLeft}
-            lastInterest={p1Economy?.lastInterest}
-            phase={phase}
-          />
-        </div>
-
-        <div className="absolute right-8 top-1/2 -translate-y-1/2">
-          <PlayerPanel
-            playerId={2}
-            currentPlayer={game.currentPlayer}
-            budget={p2Economy?.budget}
-            spawnsLeft={p2Economy?.spawnsLeft}
-            lastInterest={p2Economy?.lastInterest}
-            phase={phase}
-          />
-        </div>
-      </div>
-
-      {/* LOG */}
-      <div className="mt-8 mb-10">
-        <div className="w-full rounded-2xl border border-yellow-500/30 bg-black/60 backdrop-blur shadow-xl p-4">
-          <ActionLog logs={timelineLogs} />
-        </div>
-      </div>
-
-      {/* POPUP */}
       {popup && (
         <div
           className="fixed bg-gray-900 border border-gray-600 p-4 rounded shadow-xl z-50"
@@ -217,7 +213,6 @@ export default function GameplayPage() {
             Selected {popup.row} {popup.col}
           </div>
 
-          {/* FREE SPAWN */}
           {phase === "FREE_SPAWN" &&
             (game.availableTypes ?? []).map((type) => (
               <button
@@ -229,7 +224,6 @@ export default function GameplayPage() {
               </button>
             ))}
 
-          {/* PLAYER ACTION - STEP 1 */}
           {phase === "PLAYER_ACTION" && !selectingType && (
             <>
               <button
@@ -248,7 +242,6 @@ export default function GameplayPage() {
             </>
           )}
 
-          {/* PLAYER ACTION - STEP 2 (เลือก TYPE) */}
           {phase === "PLAYER_ACTION" && selectingType &&
             (game.availableTypes ?? []).map((type) => (
               <button
