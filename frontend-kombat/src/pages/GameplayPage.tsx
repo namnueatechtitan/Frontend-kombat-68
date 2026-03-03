@@ -12,10 +12,26 @@ import {
   type GameStatus,
 } from "../api/gameApi"
 
-export default function GameplayPage() {
+interface GameplayPageProps {
+  onRestart: () => void
+}
+
+interface ToastState {
+  type: "error" | "success"
+  message: string
+}
+
+const winnerTextByCode: Record<string, string> = {
+  P1: "ผู้ชนะ: Player 1",
+  P2: "ผู้ชนะ: Player 2",
+  TIE: "ผลการแข่งขัน: เสมอ",
+}
+
+export default function GameplayPage({ onRestart }: GameplayPageProps) {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
+  const [toast, setToast] = useState<ToastState | null>(null)
   const lastBackendLogSignatureRef = useRef("")
   const [popup, setPopup] = useState<{
     row: number
@@ -25,6 +41,38 @@ export default function GameplayPage() {
   } | null>(null)
 
   const [selectingType, setSelectingType] = useState(false)
+  const [isGameOverModalOpen, setIsGameOverModalOpen] = useState(false)
+  const [isGameFinished, setIsGameFinished] = useState(false)
+  const [winner, setWinner] = useState("ONGOING")
+
+  const showToast = (message: string) => {
+    setToast({ type: "error", message })
+  }
+
+  const maybeSetEndGame = ({
+    gameOver,
+    phase,
+    turnPhase,
+    winner: winnerCode,
+  }: {
+    gameOver: boolean
+    phase?: string
+    turnPhase?: string
+    winner?: string
+  }) => {
+    const hasWinner = Boolean(winnerCode && winnerCode !== "ONGOING")
+    const shouldOpen = Boolean(gameOver || phase === "FINISHED" || (turnPhase === "END" && hasWinner))
+
+    if (!shouldOpen) {
+      return
+    }
+
+    setWinner(winnerCode ?? "ONGOING")
+    setIsGameFinished(true)
+    setIsGameOverModalOpen((prev) => prev || true)
+    setPopup(null)
+    setSelectingType(false)
+  }
 
   const loadGame = async () => {
     try {
@@ -42,8 +90,15 @@ export default function GameplayPage() {
 
       lastBackendLogSignatureRef.current = backendLogSignature
       setGame(data)
+      maybeSetEndGame({
+        gameOver: data.gameOver,
+        phase: data.phase,
+        turnPhase: data.turnPhase ?? data.gameState?.phase,
+        winner: data.winner,
+      })
     } catch (err) {
       console.error(err)
+      showToast("ไม่สามารถโหลดสถานะเกมได้ กรุณาลองใหม่อีกครั้ง")
     } finally {
       setLoading(false)
     }
@@ -53,12 +108,21 @@ export default function GameplayPage() {
     loadGame()
   }, [])
 
+  useEffect(() => {
+    if (!toast) return
+
+    const timer = window.setTimeout(() => setToast(null), 3500)
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
   const appendTimelineLog = (text: string) => {
     setTimelineLogs((prev) => [...prev, text])
   }
 
+  const isGameplayDisabled = isGameFinished || game?.gameOver || game?.phase === "FINISHED"
+
   const handleSpawn = async (type: string) => {
-    if (!popup || !game) return
+    if (!popup || !game || isGameplayDisabled) return
 
     try {
       await spawnMinion(type, popup.row, popup.col)
@@ -74,12 +138,12 @@ export default function GameplayPage() {
 
       await loadGame()
     } catch {
-      alert("Spawn failed")
+      showToast("สั่ง Spawn ไม่สำเร็จ กรุณาลองใหม่")
     }
   }
 
   const handleBuyHex = async () => {
-    if (!popup || !game) return
+    if (!popup || !game || isGameplayDisabled) return
 
     try {
       await buyHex(popup.row, popup.col)
@@ -91,17 +155,24 @@ export default function GameplayPage() {
       setPopup(null)
       await loadGame()
     } catch {
-      alert("Buy hex failed")
+      showToast("ซื้อ Hex ไม่สำเร็จ กรุณาลองใหม่")
     }
   }
 
   const handleEndTurn = async () => {
-    if (!game) return
+    if (!game || isGameplayDisabled) return
+
     try {
-      await endTurn()
+      const response = await endTurn()
+
+      if (response.actionLogs?.length) {
+        setTimelineLogs((prev) => [...prev, ...response.actionLogs])
+      }
+
+      maybeSetEndGame(response)
       await loadGame()
     } catch {
-      alert("End turn failed")
+      showToast("จบเทิร์นไม่สำเร็จ กรุณาตรวจสอบเครือข่ายแล้วลองอีกครั้ง")
     }
   }
 
@@ -124,6 +195,8 @@ export default function GameplayPage() {
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
   const p1Economy = game.playerEconomy?.["1"]
   const p2Economy = game.playerEconomy?.["2"]
+  const latestLogs = timelineLogs.slice(-5).reverse()
+  const winnerMessage = winnerTextByCode[winner] ?? "จบเกม"
 
   return (
     <div
@@ -151,7 +224,8 @@ export default function GameplayPage() {
 
               <button
                 onClick={handleEndTurn}
-                className="px-5 sm:px-7 py-2 rounded-full font-bold tracking-[0.2em] text-sm bg-gradient-to-r from-orange-400 to-yellow-300 text-black hover:brightness-110 transition"
+                disabled={isGameplayDisabled}
+                className="px-5 sm:px-7 py-2 rounded-full font-bold tracking-[0.2em] text-sm bg-gradient-to-r from-orange-400 to-yellow-300 text-black hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 ENDTURN
               </button>
@@ -173,12 +247,13 @@ export default function GameplayPage() {
 
               <div className="order-1 lg:order-2 flex items-center justify-center min-w-0">
                 <GameBoard
-                  spawnableHexes={game.spawnableHexes}
-                  buyableHexes={game.buyableHexes ?? []}
+                  spawnableHexes={isGameplayDisabled ? [] : game.spawnableHexes}
+                  buyableHexes={isGameplayDisabled ? [] : game.buyableHexes ?? []}
                   minions={game.gameState.minions ?? []}
                   phase={phase}
                   currentPlayer={game.currentPlayer}
                   onHexClick={(row, col, x, y) => {
+                    if (isGameplayDisabled) return
                     setSelectingType(false)
                     setPopup({ row, col, x, y })
                   }}
@@ -204,7 +279,13 @@ export default function GameplayPage() {
         </div>
       </div>
 
-      {popup && (
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[70] rounded-lg border border-red-300/30 bg-red-950/90 px-4 py-2 text-sm text-red-100 shadow-lg">
+          {toast.message}
+        </div>
+      )}
+
+      {popup && !isGameplayDisabled && (
         <div
           className="fixed bg-gray-900 border border-gray-600 p-4 rounded shadow-xl z-50"
           style={{ left: popup.x, top: popup.y }}
@@ -262,6 +343,59 @@ export default function GameplayPage() {
           >
             Cancel
           </button>
+        </div>
+      )}
+
+      {isGameOverModalOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/75 backdrop-blur-sm px-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-yellow-300/40 bg-gradient-to-b from-[#24150c] via-[#1a120c] to-[#120d09] p-6 shadow-[0_0_30px_rgba(255,174,67,0.3)]">
+            <p className="text-3xl font-extrabold tracking-widest text-yellow-300 uppercase">Game Over</p>
+            <p className="mt-2 text-lg text-orange-100">{winnerMessage}</p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-orange-200/20 bg-black/30 p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-orange-200/80">Latest Action Logs</p>
+                <ul className="mt-3 space-y-2 text-sm text-white/90">
+                  {latestLogs.length > 0 ? (
+                    latestLogs.map((log, idx) => (
+                      <li key={`${log}-${idx}`} className="rounded bg-black/40 px-2 py-1">• {log}</li>
+                    ))
+                  ) : (
+                    <li className="text-white/60">No recent logs</li>
+                  )}
+                </ul>
+              </div>
+
+              <div className="rounded-xl border border-orange-200/20 bg-black/30 p-4">
+                <p className="text-xs uppercase tracking-[0.25em] text-orange-200/80">Economy Summary</p>
+                <div className="mt-3 space-y-3 text-sm text-white/90">
+                  {[p1Economy, p2Economy].map((economy, index) => (
+                    <div key={index} className="rounded bg-black/40 px-3 py-2">
+                      <p className="font-semibold text-yellow-200">Player {index + 1}</p>
+                      <p>Budget: {economy?.budget ?? 0}</p>
+                      <p>Spawns Left: {economy?.spawnsLeft ?? 0}</p>
+                      <p>Interest: {economy?.lastInterest ?? 0}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                onClick={() => setIsGameOverModalOpen(false)}
+                className="rounded-lg border border-orange-300/40 px-4 py-2 text-sm font-semibold text-orange-100 hover:bg-orange-400/10"
+              >
+                ปิด
+              </button>
+              <button
+                onClick={onRestart}
+                className="rounded-lg bg-gradient-to-r from-orange-400 to-yellow-300 px-4 py-2 text-sm font-bold text-black hover:brightness-110"
+              >
+                เล่นใหม่
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
