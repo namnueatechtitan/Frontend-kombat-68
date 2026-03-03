@@ -52,16 +52,14 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
   const maybeSetEndGame = ({
     gameOver,
     phase,
-    turnPhase,
     winner: winnerCode,
   }: {
     gameOver: boolean
     phase?: string
-    turnPhase?: string
     winner?: string
   }) => {
     const hasWinner = Boolean(winnerCode && winnerCode !== "ONGOING")
-    const shouldOpen = Boolean(gameOver || phase === "FINISHED" || (turnPhase === "END" && hasWinner))
+    const shouldOpen = Boolean(gameOver || (phase === "FINISHED" && hasWinner))
 
     if (!shouldOpen) {
       return
@@ -93,7 +91,6 @@ export default function GameplayPage({ onRestart }: GameplayPageProps) {
       maybeSetEndGame({
         gameOver: data.gameOver,
         phase: data.phase,
-        turnPhase: data.turnPhase ?? data.gameState?.phase,
         winner: data.winner,
       })
     } catch (err) {
