@@ -97,6 +97,13 @@ export interface GameStateDto {
   spawnsLeft: number
 }
 
+export interface PlayerEconomyDto {
+  playerId: number
+  budget: number
+  spawnsLeft: number
+  lastInterest: number
+}
+
 export interface GameStatus {
   currentPlayer: number
   gameOver: boolean
@@ -105,6 +112,7 @@ export interface GameStatus {
   spawnableHexes: SpawnableHex[]
   buyableHexes: SpawnableHex[]
   actionLogs: string[]
+  playerEconomy?: Record<string, PlayerEconomyDto>
 }
 
 export interface SpawnResponse {

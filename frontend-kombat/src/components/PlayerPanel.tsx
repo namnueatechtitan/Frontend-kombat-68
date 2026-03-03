@@ -1,8 +1,9 @@
 interface Props {
   playerId: number
   currentPlayer: number
-  budget: number
-  spawnsLeft: number
+  budget?: number
+  spawnsLeft?: number
+  lastInterest?: number
   phase: string
 }
 
@@ -11,6 +12,7 @@ export default function PlayerPanel({
   currentPlayer,
   budget,
   spawnsLeft,
+  lastInterest,
   phase,
 }: Props) {
   const isActive = currentPlayer === playerId
@@ -30,7 +32,7 @@ export default function PlayerPanel({
       <div className="space-y-3 text-sm">
         <div>
           <span className="text-gray-400">Budget:</span>{" "}
-          {isActive ? budget : "-"}
+          {budget ?? "-"}
         </div>
 
         <div>
@@ -42,7 +44,12 @@ export default function PlayerPanel({
           <span className="text-gray-400">
             Spawns Left:
           </span>{" "}
-          {isActive ? spawnsLeft : "-"}
+          {spawnsLeft ?? "-"}
+        </div>
+
+        <div>
+          <span className="text-gray-400">Last Interest:</span>{" "}
+          {lastInterest ?? "-"}
         </div>
       </div>
     </div>

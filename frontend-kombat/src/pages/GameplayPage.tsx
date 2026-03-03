@@ -126,6 +126,9 @@ const handleSpawn = async () => {
 
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
 
+  const p1Economy = game.playerEconomy?.["1"]
+  const p2Economy = game.playerEconomy?.["2"]
+
   const displayedLogs = timelineLogs
 
   return (
@@ -138,6 +141,7 @@ const handleSpawn = async () => {
           <div>Current Player: {game.currentPlayer}</div>
           <div>Phase: {phase}</div>
           <div>Spawns Left: {spawnsLeft}</div>
+          <div>Last Interest: {game.playerEconomy?.[String(game.currentPlayer)]?.lastInterest ?? 0}</div>
         </div>
 
         <button
@@ -169,8 +173,9 @@ const handleSpawn = async () => {
           <PlayerPanel
             playerId={1}
             currentPlayer={game.currentPlayer}
-            budget={budget}
-            spawnsLeft={spawnsLeft}
+            budget={p1Economy?.budget ?? budget}
+            spawnsLeft={p1Economy?.spawnsLeft ?? spawnsLeft}
+            lastInterest={p1Economy?.lastInterest}
             phase={phase}
           />
         </div>
@@ -180,8 +185,9 @@ const handleSpawn = async () => {
           <PlayerPanel
             playerId={2}
             currentPlayer={game.currentPlayer}
-            budget={budget}
-            spawnsLeft={spawnsLeft}
+            budget={p2Economy?.budget}
+            spawnsLeft={p2Economy?.spawnsLeft}
+            lastInterest={p2Economy?.lastInterest}
             phase={phase}
           />
         </div>
