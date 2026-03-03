@@ -111,20 +111,54 @@ export default function GameBoard({
     return "#1E1E1E"
   }
 
+  const getStrokeConfig = (row: number, col: number) => {
+    const key = `${row}-${col}`
+
+    if (spawnMap[key]) {
+      return {
+        stroke: playerColors[spawnMap[key]],
+        strokeWidth: 5,
+        className: "cursor-pointer",
+      }
+    }
+
+    if (isBuyable(row, col)) {
+      return {
+        stroke: "#FFD700",
+        strokeWidth: 4,
+        className: "cursor-pointer buyable-pulse",
+      }
+    }
+
+    return {
+      stroke: "#2A2A2A",
+      strokeWidth: 2,
+      className: "cursor-pointer",
+    }
+  }
+
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center w-full max-w-full overflow-x-auto">
       <svg width="700" height="700" viewBox="0 0 700 700" className="select-none">
+        <defs>
+          <style>
+            {`@keyframes buyablePulse { 0% { opacity: 1; } 50% { opacity: 0.45; } 100% { opacity: 1; } }
+              .buyable-pulse { animation: buyablePulse 1.2s infinite; }`}
+          </style>
+        </defs>
+
         {paths.map(({ d, row, col }) => {
           const key = `${row}-${col}`
+          const strokeConfig = getStrokeConfig(row, col)
 
           return (
             <path
               key={key}
               d={d}
               fill={getFillColor(row, col)}
-              stroke="#2A2A2A"
-              strokeWidth={2}
-              className="cursor-pointer transition duration-200 hover:brightness-110"
+              stroke={strokeConfig.stroke}
+              strokeWidth={strokeConfig.strokeWidth}
+              className={strokeConfig.className}
               onClick={(e) => onHexClick(row, col, e.clientX, e.clientY)}
             />
           )
