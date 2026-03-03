@@ -24,6 +24,8 @@ interface Props {
   hexWidth: number
   hexHeight: number
   verticalSpacing: number
+  hexGap: number
+  boardPadding: number
 }
 
 interface PositionedMinion {
@@ -59,6 +61,8 @@ export default function SpawnedMinionsLayer({
   hexWidth,
   hexHeight,
   verticalSpacing,
+  hexGap,
+  boardPadding,
 }: Props) {
   const positionedMinions = useMemo(() => {
     const minionsByHex: Record<string, BoardMinion[]> = {}
@@ -86,8 +90,11 @@ export default function SpawnedMinionsLayer({
 
       if (Number.isNaN(row) || Number.isNaN(col)) return
 
-      const xOffset = col * hexWidth + (row % 2 ? hexWidth / 2 : 0)
-      const yOffset = row * verticalSpacing
+      const xOffset =
+        col * (hexWidth + hexGap) +
+        (row % 2 ? (hexWidth + hexGap) / 2 : 0) +
+        boardPadding
+      const yOffset = row * (verticalSpacing + hexGap) + boardPadding
       const centerX = xOffset + hexWidth / 2
       const centerY = yOffset + hexHeight / 2
 
@@ -105,7 +112,7 @@ export default function SpawnedMinionsLayer({
     })
 
     return result
-  }, [hexHeight, hexWidth, minions, verticalSpacing])
+  }, [boardPadding, hexGap, hexHeight, hexWidth, minions, verticalSpacing])
 
   const resolveImageByType = (type: string, ownerId: number) => {
     const normalized = type.toLowerCase().replace(/[_\s-]/g, "")
@@ -138,7 +145,7 @@ export default function SpawnedMinionsLayer({
         const imageSrc = resolveImageByType(minion.type, minion.ownerId)
         if (!imageSrc) return null
 
-        const size = 70
+        const size = 75
         const offsetStep = 10
         const offset =
           (minion.stackIndex - (minion.stackSize - 1) / 2) * offsetStep
