@@ -113,6 +113,7 @@ export interface GameStatus {
   buyableHexes: SpawnableHex[]
   actionLogs: string[]
   playerEconomy?: Record<string, PlayerEconomyDto>
+  availableTypes: string[]
 }
 
 export interface SpawnResponse {

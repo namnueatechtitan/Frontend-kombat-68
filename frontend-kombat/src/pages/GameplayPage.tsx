@@ -11,7 +11,6 @@ import {
 } from "../api/gameApi"
 
 export default function GameplayPage() {
-
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
@@ -22,6 +21,9 @@ export default function GameplayPage() {
     x: number
     y: number
   } | null>(null)
+
+  // ✅ NEW: ควบคุมว่ากำลังเลือก type อยู่ไหม
+  const [selectingType, setSelectingType] = useState(false)
 
   // ==========================
   // LOAD GAME
@@ -34,11 +36,14 @@ export default function GameplayPage() {
       const backendLogs = data.actionLogs ?? []
       const backendLogSignature = JSON.stringify(backendLogs)
 
-      if (backendLogs.length > 0 && backendLogSignature !== lastBackendLogSignatureRef.current) {
+      if (
+        backendLogs.length > 0 &&
+        backendLogSignature !== lastBackendLogSignatureRef.current
+      ) {
         setTimelineLogs((prev) => [...prev, ...backendLogs])
       }
-      lastBackendLogSignatureRef.current = backendLogSignature
 
+      lastBackendLogSignatureRef.current = backendLogSignature
       setGame(data)
     } catch (err) {
       console.error(err)
@@ -58,27 +63,31 @@ export default function GameplayPage() {
   // ==========================
   // SPAWN
   // ==========================
-const handleSpawn = async () => {
-  if (!popup || !game) return
 
-  try {
-    await spawnMinion("FIGHTER", popup.row, popup.col)
+  const handleSpawn = async (type: string) => {
+    if (!popup || !game) return
 
-    appendTimelineLog(
-      game.gameState.phase === "FREE_SPAWN"
-        ? `Player ${game.currentPlayer} spawned free at (${popup.row}, ${popup.col})`
-        : `Player ${game.currentPlayer} bought minion at (${popup.row}, ${popup.col})`
-    )
+    try {
+      await spawnMinion(type, popup.row, popup.col)
 
-    setPopup(null)
-    await loadGame()
-  } catch {
-    alert("Spawn failed")
+      appendTimelineLog(
+        game.gameState.phase === "FREE_SPAWN"
+          ? `Player ${game.currentPlayer} spawned ${type} free at (${popup.row}, ${popup.col})`
+          : `Player ${game.currentPlayer} bought ${type} at (${popup.row}, ${popup.col})`
+      )
+
+      // reset
+      setSelectingType(false)
+      setPopup(null)
+
+      await loadGame()
+    } catch {
+      alert("Spawn failed")
+    }
   }
-}
- 
+
   // ==========================
-  // BUY HEX (เรียก backend จริง)
+  // BUY HEX
   // ==========================
 
   const handleBuyHex = async () => {
@@ -87,10 +96,12 @@ const handleSpawn = async () => {
     try {
       await buyHex(popup.row, popup.col)
 
-      appendTimelineLog(`Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`)
+      appendTimelineLog(
+        `Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`
+      )
 
       setPopup(null)
-      await loadGame()   // reload state จาก backend
+      await loadGame()
     } catch {
       alert("Buy hex failed")
     }
@@ -98,10 +109,8 @@ const handleSpawn = async () => {
 
   const handleEndTurn = async () => {
     if (!game) return
-
     try {
       await endTurn()
-
       await loadGame()
     } catch {
       alert("End turn failed")
@@ -125,11 +134,8 @@ const handleSpawn = async () => {
   }
 
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
-
   const p1Economy = game.playerEconomy?.["1"]
   const p2Economy = game.playerEconomy?.["2"]
-
-  const displayedLogs = timelineLogs
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
@@ -141,7 +147,10 @@ const handleSpawn = async () => {
           <div>Current Player: {game.currentPlayer}</div>
           <div>Phase: {phase}</div>
           <div>Spawns Left: {spawnsLeft}</div>
-          <div>Last Interest: {game.playerEconomy?.[String(game.currentPlayer)]?.lastInterest ?? 0}</div>
+          <div>
+            Last Interest:{" "}
+            {game.playerEconomy?.[String(game.currentPlayer)]?.lastInterest ?? 0}
+          </div>
         </div>
 
         <button
@@ -155,20 +164,19 @@ const handleSpawn = async () => {
       {/* MAIN */}
       <div className="relative flex-1 px-8 py-6">
 
-        {/* BOARD */}
         <div className="absolute inset-0 flex items-center justify-center">
           <GameBoard
             spawnableHexes={game.spawnableHexes}
             buyableHexes={game.buyableHexes ?? []}
             phase={phase}
             currentPlayer={game.currentPlayer}
-            onHexClick={(row, col, x, y) =>
+            onHexClick={(row, col, x, y) => {
+              setSelectingType(false)
               setPopup({ row, col, x, y })
-            }
+            }}
           />
         </div>
 
-        {/* LEFT PANEL */}
         <div className="absolute left-8 top-1/2 -translate-y-1/2">
           <PlayerPanel
             playerId={1}
@@ -180,7 +188,6 @@ const handleSpawn = async () => {
           />
         </div>
 
-        {/* RIGHT PANEL */}
         <div className="absolute right-8 top-1/2 -translate-y-1/2">
           <PlayerPanel
             playerId={2}
@@ -193,60 +200,71 @@ const handleSpawn = async () => {
         </div>
       </div>
 
-     <div className="mt-8 mb-10">
-  <div className="w-full 
-                  rounded-2xl 
-                  border border-yellow-500/30 
-                  bg-black/60 
-                  backdrop-blur 
-                  shadow-xl 
-                  p-4">
-    <ActionLog logs={displayedLogs} />
-  </div>
-</div>
+      {/* LOG */}
+      <div className="mt-8 mb-10">
+        <div className="w-full rounded-2xl border border-yellow-500/30 bg-black/60 backdrop-blur shadow-xl p-4">
+          <ActionLog logs={timelineLogs} />
+        </div>
+      </div>
 
       {/* POPUP */}
       {popup && (
         <div
           className="fixed bg-gray-900 border border-gray-600 p-4 rounded shadow-xl z-50"
-          style={{
-            left: popup.x,
-            top: popup.y,
-          }}
+          style={{ left: popup.x, top: popup.y }}
         >
           <div className="mb-2 font-bold">
             Selected {popup.row} {popup.col}
           </div>
 
-          {phase === "FREE_SPAWN" && (
-            <button
-              onClick={handleSpawn}
-              className="block w-full mb-2 px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-            >
-              Spawn Free
-            </button>
+          {/* FREE SPAWN */}
+          {phase === "FREE_SPAWN" &&
+            (game.availableTypes ?? []).map((type) => (
+              <button
+                key={type}
+                onClick={() => handleSpawn(type)}
+                className="block w-full mb-2 px-3 py-1 bg-green-600 rounded hover:bg-green-700"
+              >
+                Spawn {type}
+              </button>
+            ))}
+
+          {/* PLAYER ACTION - STEP 1 */}
+          {phase === "PLAYER_ACTION" && !selectingType && (
+            <>
+              <button
+                onClick={handleBuyHex}
+                className="block w-full mb-2 px-3 py-1 bg-yellow-500 rounded hover:bg-yellow-600"
+              >
+                Buy Hex
+              </button>
+
+              <button
+                onClick={() => setSelectingType(true)}
+                className="block w-full mb-2 px-3 py-1 bg-purple-600 rounded hover:bg-purple-700"
+              >
+                Buy Minion
+              </button>
+            </>
           )}
 
-          {phase === "PLAYER_ACTION" && (
-            <button
-              onClick={handleBuyHex}
-              className="block w-full mb-2 px-3 py-1 bg-yellow-500 rounded hover:bg-yellow-600"
-            >
-              Buy Hex
-            </button>
-          )}
-
-          {phase === "PLAYER_ACTION" && (
-            <button
-              onClick={handleSpawn}
-              className="block w-full mb-2 px-3 py-1 bg-purple-600 rounded hover:bg-purple-700"
-            >
-              Buy Minion
-            </button>
-          )}
+          {/* PLAYER ACTION - STEP 2 (เลือก TYPE) */}
+          {phase === "PLAYER_ACTION" && selectingType &&
+            (game.availableTypes ?? []).map((type) => (
+              <button
+                key={type}
+                onClick={() => handleSpawn(type)}
+                className="block w-full mb-2 px-3 py-1 bg-green-600 rounded hover:bg-green-700"
+              >
+                {type}
+              </button>
+            ))}
 
           <button
-            onClick={() => setPopup(null)}
+            onClick={() => {
+              setSelectingType(false)
+              setPopup(null)
+            }}
             className="block w-full px-3 py-1 bg-red-600 rounded hover:bg-red-700"
           >
             Cancel
