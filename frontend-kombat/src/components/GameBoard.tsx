@@ -30,6 +30,7 @@ export default function GameBoard({
   phase,
   onHexClick,
 }: Props) {
+
   const playerColors: Record<number, string> = {
     1: "#B1202B",
     2: "#6E3C82",
@@ -37,7 +38,8 @@ export default function GameBoard({
 
   const GOLD = "#FFD700"
 
-  const hexSize = 35
+  const hexSize = 45
+  const hexGap = 10
   const hexWidth = Math.sqrt(3) * hexSize
   const hexHeight = 2 * hexSize
   const verticalSpacing = hexSize * 1.5
@@ -50,17 +52,30 @@ export default function GameBoard({
     return map
   }, [spawnableHexes])
 
+  const buyableMap = useMemo(() => {
+    const map: Record<string, number> = {}
+    buyableHexes.forEach((h) => {
+      map[`${h.row}-${h.col}`] = h.ownerId
+    })
+    return map
+  }, [buyableHexes])
+
+  const isBuyable = (row: number, col: number) => {
+    if (phase !== "PLAYER_ACTION") return false
+    return buyableMap[`${row}-${col}`] === currentPlayer
+  }
+
   const paths = useMemo(() => {
-    const arr: {
-      d: string
-      row: number
-      col: number
-    }[] = []
+    const arr: { d: string; row: number; col: number }[] = []
 
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
-        const xOffset = col * hexWidth + (row % 2 ? hexWidth / 2 : 0)
-        const yOffset = row * verticalSpacing
+        const xOffset =
+  col * (hexWidth + hexGap) +
+  (row % 2 ? (hexWidth + hexGap) / 2 : 0)
+
+const yOffset =
+  row * (verticalSpacing + hexGap)
 
         const points = [
           [xOffset + hexWidth / 2, yOffset],
@@ -82,38 +97,16 @@ export default function GameBoard({
     return arr
   }, [hexHeight, hexWidth, verticalSpacing])
 
-  const buyableMap = useMemo(() => {
-    const map: Record<string, number> = {}
-    buyableHexes.forEach((h) => {
-      map[`${h.row}-${h.col}`] = h.ownerId
-    })
-    return map
-  }, [buyableHexes])
-
-  const isBuyable = (row: number, col: number) => {
-    if (phase !== "PLAYER_ACTION") return false
-
-    const owner = buyableMap[`${row}-${col}`]
-    return owner === currentPlayer
-  }
-
-  const getFillColor = (row: number, col: number) => {
-    const key = `${row}-${col}`
-
-    if (spawnMap[key]) {
-      return playerColors[spawnMap[key]]
-    }
-
-    if (isBuyable(row, col)) {
-      return GOLD
-    }
-
+  // ✅ พื้นต้องคงที่
+  const getFillColor = () => {
     return "#1E1E1E"
   }
 
+  // ✅ เงื่อนไขกรอบใหม่
   const getStrokeConfig = (row: number, col: number) => {
     const key = `${row}-${col}`
 
+    // Spawn = ขอบหนา สีตาม owner
     if (spawnMap[key]) {
       return {
         stroke: playerColors[spawnMap[key]],
@@ -122,14 +115,16 @@ export default function GameBoard({
       }
     }
 
+    // Buyable = ทอง + กระพริบ
     if (isBuyable(row, col)) {
       return {
-        stroke: "#FFD700",
+        stroke: GOLD,
         strokeWidth: 4,
         className: "cursor-pointer buyable-pulse",
       }
     }
 
+    // ปกติ
     return {
       stroke: "#2A2A2A",
       strokeWidth: 2,
@@ -139,11 +134,20 @@ export default function GameBoard({
 
   return (
     <div className="flex justify-center w-full max-w-full overflow-x-auto">
-      <svg width="700" height="700" viewBox="0 0 700 700" className="select-none">
+      <svg width="600" height="600" viewBox="0 0 700 700" className="select-none">
         <defs>
           <style>
-            {`@keyframes buyablePulse { 0% { opacity: 1; } 50% { opacity: 0.45; } 100% { opacity: 1; } }
-              .buyable-pulse { animation: buyablePulse 1.2s infinite; }`}
+            {`
+              @keyframes buyablePulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.45; }
+                100% { opacity: 1; }
+              }
+
+              .buyable-pulse {
+                animation: buyablePulse 1.2s infinite;
+              }
+            `}
           </style>
         </defs>
 
@@ -155,7 +159,7 @@ export default function GameBoard({
             <path
               key={key}
               d={d}
-              fill={getFillColor(row, col)}
+              fill={getFillColor()}
               stroke={strokeConfig.stroke}
               strokeWidth={strokeConfig.strokeWidth}
               className={strokeConfig.className}
