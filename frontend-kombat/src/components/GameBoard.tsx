@@ -50,19 +50,6 @@ export default function GameBoard({
     return map
   }, [spawnableHexes])
 
-  const getHexPath = (x: number, y: number) => {
-    const points = [
-      [x + hexWidth / 2, y],
-      [x + hexWidth, y + hexHeight / 4],
-      [x + hexWidth, y + (3 * hexHeight) / 4],
-      [x + hexWidth / 2, y + hexHeight],
-      [x, y + (3 * hexHeight) / 4],
-      [x, y + hexHeight / 4],
-    ]
-
-    return "M" + points.map((p) => p.join(",")).join(" L") + " Z"
-  }
-
   const paths = useMemo(() => {
     const arr: {
       d: string
@@ -75,8 +62,17 @@ export default function GameBoard({
         const xOffset = col * hexWidth + (row % 2 ? hexWidth / 2 : 0)
         const yOffset = row * verticalSpacing
 
+        const points = [
+          [xOffset + hexWidth / 2, yOffset],
+          [xOffset + hexWidth, yOffset + hexHeight / 4],
+          [xOffset + hexWidth, yOffset + (3 * hexHeight) / 4],
+          [xOffset + hexWidth / 2, yOffset + hexHeight],
+          [xOffset, yOffset + (3 * hexHeight) / 4],
+          [xOffset, yOffset + hexHeight / 4],
+        ]
+
         arr.push({
-          d: getHexPath(xOffset, yOffset),
+          d: "M" + points.map((p) => p.join(",")).join(" L") + " Z",
           row,
           col,
         })

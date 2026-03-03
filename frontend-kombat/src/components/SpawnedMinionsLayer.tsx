@@ -1,4 +1,14 @@
 import { useMemo } from "react"
+import assasinDemonImage from "../assets/images/Minion_gameplay/demon/assasindemon.png"
+import dpsDemonImage from "../assets/images/Minion_gameplay/demon/dpsdemon.png"
+import fighterDemonImage from "../assets/images/Minion_gameplay/demon/figtherdemon.png"
+import supportDemonImage from "../assets/images/Minion_gameplay/demon/supportdemon.png"
+import tankDemonImage from "../assets/images/Minion_gameplay/demon/tankdemon.png"
+import assasinHumanImage from "../assets/images/Minion_gameplay/human/assasinhuman.png"
+import dpsHumanImage from "../assets/images/Minion_gameplay/human/dpshuman.png"
+import fighterHumanImage from "../assets/images/Minion_gameplay/human/figtherhuman.png"
+import supportHumanImage from "../assets/images/Minion_gameplay/human/supporthuman.png"
+import tankHumanImage from "../assets/images/Minion_gameplay/human/tankhuman.png"
 
 export interface BoardMinion {
   ownerId: number
@@ -19,10 +29,29 @@ interface Props {
 interface PositionedMinion {
   key: string
   type: string
+  ownerId: number
   x: number
   y: number
   stackIndex: number
   stackSize: number
+}
+
+const MINION_IMAGE_BY_TYPE: Record<string, string> = {
+  assasindemon: assasinDemonImage,
+  assasinhuman: assasinHumanImage,
+  dpsdemon: dpsDemonImage,
+  dpshuman: dpsHumanImage,
+  figtherdemon: fighterDemonImage,
+  figtherhuman: fighterHumanImage,
+  supportdemon: supportDemonImage,
+  supporthuman: supportHumanImage,
+  tankdemon: tankDemonImage,
+  tankhuman: tankHumanImage,
+  // aliases
+  assassindemon: assasinDemonImage,
+  assassinhuman: assasinHumanImage,
+  fighterdemon: fighterDemonImage,
+  fighterhuman: fighterHumanImage,
 }
 
 export default function SpawnedMinionsLayer({
@@ -31,27 +60,6 @@ export default function SpawnedMinionsLayer({
   hexHeight,
   verticalSpacing,
 }: Props) {
-  const minionImages = useMemo(() => {
-    const files = import.meta.glob(
-      "../assets/images/Minion_gameplay/**/*.{png,PNG}",
-      {
-        eager: true,
-        import: "default",
-      }
-    ) as Record<string, string>
-
-    const map: Record<string, string> = {}
-
-    Object.entries(files).forEach(([path, src]) => {
-      const filename = path.split("/").pop()?.split(".")[0]?.toLowerCase()
-      if (filename) {
-        map[filename] = src
-      }
-    })
-
-    return map
-  }, [])
-
   const positionedMinions = useMemo(() => {
     const minionsByHex: Record<string, BoardMinion[]> = {}
 
@@ -87,6 +95,7 @@ export default function SpawnedMinionsLayer({
         result.push({
           key: `${hexKey}-${minion.type}-${index}`,
           type: minion.type,
+          ownerId: minion.ownerId,
           x: centerX,
           y: centerY,
           stackIndex: index,
@@ -98,15 +107,35 @@ export default function SpawnedMinionsLayer({
     return result
   }, [hexHeight, hexWidth, minions, verticalSpacing])
 
-  const getMinionImage = (type: string) => {
+  const resolveImageByType = (type: string, ownerId: number) => {
     const normalized = type.toLowerCase().replace(/[_\s-]/g, "")
-    return minionImages[normalized]
+
+    const direct = MINION_IMAGE_BY_TYPE[normalized]
+    if (direct) return direct
+
+    const roleToOwnerVariant: Record<string, { 1: string; 2: string }> = {
+      fighter: { 1: fighterHumanImage, 2: fighterDemonImage },
+      figther: { 1: fighterHumanImage, 2: fighterDemonImage },
+      assassin: { 1: assasinHumanImage, 2: assasinDemonImage },
+      assasin: { 1: assasinHumanImage, 2: assasinDemonImage },
+      assasinn: { 1: assasinHumanImage, 2: assasinDemonImage },
+      dps: { 1: dpsHumanImage, 2: dpsDemonImage },
+      support: { 1: supportHumanImage, 2: supportDemonImage },
+      tank: { 1: tankHumanImage, 2: tankDemonImage },
+    }
+
+    const byRole = roleToOwnerVariant[normalized]
+    if (byRole) {
+      return ownerId === 2 ? byRole[2] : byRole[1]
+    }
+
+    return undefined
   }
 
   return (
     <>
       {positionedMinions.map((minion) => {
-        const imageSrc = getMinionImage(minion.type)
+        const imageSrc = resolveImageByType(minion.type, minion.ownerId)
         if (!imageSrc) return null
 
         const size = 36
