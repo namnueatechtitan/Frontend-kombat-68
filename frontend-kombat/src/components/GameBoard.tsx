@@ -38,11 +38,22 @@ export default function GameBoard({
 
   const GOLD = "#FFD700"
 
-  const hexSize = 45
-  const hexGap = 10
+  const hexSize = 50
+  const hexGap = 6
   const hexWidth = Math.sqrt(3) * hexSize
   const hexHeight = 2 * hexSize
   const verticalSpacing = hexSize * 1.5
+  const rows = 8
+  const cols = 8
+  const boardPadding = 12
+
+  const boardWidth =
+    (cols - 1) * (hexWidth + hexGap) +
+    (hexWidth + hexGap) / 2 +
+    hexWidth +
+    boardPadding * 2
+  const boardHeight =
+    (rows - 1) * (verticalSpacing + hexGap) + hexHeight + boardPadding * 2
 
   const spawnMap = useMemo(() => {
     const map: Record<string, number> = {}
@@ -68,14 +79,14 @@ export default function GameBoard({
   const paths = useMemo(() => {
     const arr: { d: string; row: number; col: number }[] = []
 
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
         const xOffset =
-  col * (hexWidth + hexGap) +
-  (row % 2 ? (hexWidth + hexGap) / 2 : 0)
+          col * (hexWidth + hexGap) +
+          (row % 2 ? (hexWidth + hexGap) / 2 : 0) +
+          boardPadding
 
-const yOffset =
-  row * (verticalSpacing + hexGap)
+        const yOffset = row * (verticalSpacing + hexGap) + boardPadding
 
         const points = [
           [xOffset + hexWidth / 2, yOffset],
@@ -95,7 +106,7 @@ const yOffset =
     }
 
     return arr
-  }, [hexHeight, hexWidth, verticalSpacing])
+  }, [boardPadding, cols, hexGap, hexHeight, hexWidth, rows, verticalSpacing])
 
   // ✅ พื้นต้องคงที่
   const getFillColor = () => {
@@ -134,7 +145,12 @@ const yOffset =
 
   return (
     <div className="flex justify-center w-full max-w-full overflow-x-auto">
-      <svg width="600" height="600" viewBox="0 0 700 700" className="select-none">
+      <svg
+        width={boardWidth}
+        height={boardHeight}
+        viewBox={`0 0 ${boardWidth} ${boardHeight}`}
+        className="select-none"
+      >
         <defs>
           <style>
             {`
@@ -173,6 +189,8 @@ const yOffset =
           hexWidth={hexWidth}
           hexHeight={hexHeight}
           verticalSpacing={verticalSpacing}
+          hexGap={hexGap}
+          boardPadding={boardPadding}
         />
       </svg>
     </div>
