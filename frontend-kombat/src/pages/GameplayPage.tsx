@@ -15,7 +15,7 @@ export default function GameplayPage() {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [clientLogs, setClientLogs] = useState<string[]>([])
-  const lastBackendLogCountRef = useRef(0)
+  const lastBackendLogSignatureRef = useRef("")
   const [popup, setPopup] = useState<{
     row: number
     col: number
@@ -31,11 +31,13 @@ export default function GameplayPage() {
     try {
       const data = await getGameStatus()
 
-      const backendLogCount = data.actionLogs?.length ?? 0
-      if (backendLogCount > lastBackendLogCountRef.current) {
+      const backendLogs = data.actionLogs ?? []
+      const backendLogSignature = JSON.stringify(backendLogs)
+
+      if (backendLogs.length > 0 && backendLogSignature !== lastBackendLogSignatureRef.current) {
         setClientLogs([])
       }
-      lastBackendLogCountRef.current = backendLogCount
+      lastBackendLogSignatureRef.current = backendLogSignature
 
       setGame(data)
     } catch (err) {
@@ -127,7 +129,7 @@ const handleSpawn = async () => {
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
 
   const backendLogs = game.actionLogs ?? []
-  const displayedLogs = [...backendLogs, ...clientLogs]
+  const displayedLogs = [...clientLogs, ...backendLogs]
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
