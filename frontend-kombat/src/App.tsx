@@ -15,7 +15,7 @@ import GameplayPage from "./pages/GameplayPage"
 import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
 import SelectMinionDemonPage from "./pages/SelectMinionDemonPage"
 import PreBattlePage from "./pages/PreBattleSummaryPage"
-import { setMode, startGame } from "./api/gameApi" 
+import { setMode, setupFull } from "./api/gameApi"
 
 import type { MinionData, MinionType } from "./types/MinionData"
 
@@ -88,25 +88,14 @@ function App() {
 
     try {
 
-      const res = await fetch(
-        `http://localhost:8080/api/game/setup/full/${setupPlayer}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            currentMinions.map(m => ({
-              type: m.type,
-              strategy: m.strategy,
-              defenseFactor: m.defenseFactor,
-            }))
-          ),
-        }
+      await setupFull(
+        setupPlayer,
+        currentMinions.map(m => ({
+          type: m.type,
+          strategy: m.strategy,
+          defenseFactor: m.defenseFactor,
+        }))
       )
-
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || "Setup failed")
-      }
 
       if (isPlayer1) {
         setSetupPlayer(2)
@@ -292,8 +281,7 @@ function App() {
       {page === "preBattle" && (
         <PreBattlePage
           onBack={handleBack}
-          onConfirm={async () => {
-            await startGame()   
+          onConfirm={() => {
             setPage("game")
           }}
         />

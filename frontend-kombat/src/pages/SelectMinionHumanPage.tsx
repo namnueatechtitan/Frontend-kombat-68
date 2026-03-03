@@ -36,7 +36,7 @@ interface Props {
 export default function SelectMinionHumanPage({
   minionTypeCount,
   minions,
-  onBack,
+  onBack: _onBack,
   onSelect,
   onRemove,
   onNext,

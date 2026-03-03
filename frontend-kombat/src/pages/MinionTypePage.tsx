@@ -18,13 +18,10 @@ interface Props {
   onConfirm: (minionType: number) => void
 }
 
-export default function MinionTypePage({ onBack, onConfirm }: Props) {
+export default function MinionTypePage({ onBack: _onBack, onConfirm }: Props) {
   const minionTypes = [type1, type2, type3, type4, type5]
 
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [direction, setDirection] =
-    useState<"left" | "right" | null>(null)
-
   const [isAnimating, setIsAnimating] = useState(false)
   const [shake, setShake] = useState(false)
 
@@ -36,20 +33,17 @@ export default function MinionTypePage({ onBack, onConfirm }: Props) {
     setTimeout(() => {
       setIsAnimating(false)
       setShake(false)
-      setDirection(null)
     }, 300)
   }
 
   const handleNext = () => {
     if (isAnimating) return
-    setDirection("right")
     const next = (currentIndex + 1) % minionTypes.length
     triggerChange(next)
   }
 
   const handlePrev = () => {
     if (isAnimating) return
-    setDirection("left")
     const prev =
       (currentIndex - 1 + minionTypes.length) % minionTypes.length
     triggerChange(prev)

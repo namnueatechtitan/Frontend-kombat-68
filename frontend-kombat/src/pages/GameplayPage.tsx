@@ -1,48 +1,21 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import GameBoard from "../components/GameBoard"
 import PlayerPanel from "../components/PlayerPanel"
 import ActionLog from "../components/ActionLog"
 import {
+  buyHex,
+  endTurn,
   getGameStatus,
   spawnMinion,
-  endTurn,
+  type GameStatus,
 } from "../api/gameApi"
-
-interface Minion {
-  ownerId: number
-  type: string
-  position: {
-    x: number
-    y: number
-  }
-}
-
-interface SpawnableHex {
-  row: number
-  col: number
-  ownerId: number
-}
-
-interface GameStatus {
-  currentPlayer: number
-  gameOver: boolean
-  winner: string
-  gameState: {
-    phase: string
-    minions: Minion[]
-    turnNumber: number
-    budgetManager: {
-      budget: number
-    }
-  }
-  spawnableHexes: SpawnableHex[]   // ✅ รับจาก backend
-}
 
 export default function GameplayPage() {
 
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [logs, setLogs] = useState<string[]>([])
+  const [timelineLogs, setTimelineLogs] = useState<string[]>([])
+  const lastBackendLogSignatureRef = useRef("")
   const [popup, setPopup] = useState<{
     row: number
     col: number
@@ -57,6 +30,15 @@ export default function GameplayPage() {
   const loadGame = async () => {
     try {
       const data = await getGameStatus()
+
+      const backendLogs = data.actionLogs ?? []
+      const backendLogSignature = JSON.stringify(backendLogs)
+
+      if (backendLogs.length > 0 && backendLogSignature !== lastBackendLogSignatureRef.current) {
+        setTimelineLogs((prev) => [...prev, ...backendLogs])
+      }
+      lastBackendLogSignatureRef.current = backendLogSignature
+
       setGame(data)
     } catch (err) {
       console.error(err)
@@ -69,8 +51,8 @@ export default function GameplayPage() {
     loadGame()
   }, [])
 
-  const addLog = (text: string) => {
-    setLogs(prev => [...prev, text])
+  const appendTimelineLog = (text: string) => {
+    setTimelineLogs((prev) => [...prev, text])
   }
 
   // ==========================
@@ -80,13 +62,13 @@ const handleSpawn = async () => {
   if (!popup || !game) return
 
   try {
-    const result = await spawnMinion("FIGHTER", popup.row, popup.col)
+    await spawnMinion("FIGHTER", popup.row, popup.col)
 
-    if (result && result.success === true) {
-      addLog(
-        `Player ${game.currentPlayer} spawned at (${popup.row}, ${popup.col})`
-      )
-    }
+    appendTimelineLog(
+      game.gameState.phase === "FREE_SPAWN"
+        ? `Player ${game.currentPlayer} spawned free at (${popup.row}, ${popup.col})`
+        : `Player ${game.currentPlayer} bought minion at (${popup.row}, ${popup.col})`
+    )
 
     setPopup(null)
     await loadGame()
@@ -103,18 +85,9 @@ const handleSpawn = async () => {
     if (!popup || !game) return
 
     try {
-      await fetch("/api/game/buy-hex", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          row: popup.row,
-          col: popup.col
-        })
-      })
+      await buyHex(popup.row, popup.col)
 
-      addLog(
-        `Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`
-      )
+      appendTimelineLog(`Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`)
 
       setPopup(null)
       await loadGame()   // reload state จาก backend
@@ -128,10 +101,6 @@ const handleSpawn = async () => {
 
     try {
       await endTurn()
-
-      addLog(
-        `Player ${game.currentPlayer} ended turn`
-      )
 
       await loadGame()
     } catch {
@@ -155,8 +124,9 @@ const handleSpawn = async () => {
     )
   }
 
-  const { phase, minions, turnNumber, budgetManager } =
-    game.gameState
+  const { phase, turnNumber, budget, spawnsLeft } = game.gameState
+
+  const displayedLogs = timelineLogs
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-br from-black to-gray-900 text-white">
@@ -167,6 +137,7 @@ const handleSpawn = async () => {
           <div>Turn: {turnNumber}</div>
           <div>Current Player: {game.currentPlayer}</div>
           <div>Phase: {phase}</div>
+          <div>Spawns Left: {spawnsLeft}</div>
         </div>
 
         <button
@@ -183,7 +154,8 @@ const handleSpawn = async () => {
         {/* BOARD */}
         <div className="absolute inset-0 flex items-center justify-center">
           <GameBoard
-            spawnableHexes={game.spawnableHexes}   // ✅ ใช้ของ backend
+            spawnableHexes={game.spawnableHexes}
+            buyableHexes={game.buyableHexes ?? []}
             phase={phase}
             currentPlayer={game.currentPlayer}
             onHexClick={(row, col, x, y) =>
@@ -197,7 +169,8 @@ const handleSpawn = async () => {
           <PlayerPanel
             playerId={1}
             currentPlayer={game.currentPlayer}
-            budget={budgetManager?.budget}
+            budget={budget}
+            spawnsLeft={spawnsLeft}
             phase={phase}
           />
         </div>
@@ -207,7 +180,8 @@ const handleSpawn = async () => {
           <PlayerPanel
             playerId={2}
             currentPlayer={game.currentPlayer}
-            budget={budgetManager?.budget}
+            budget={budget}
+            spawnsLeft={spawnsLeft}
             phase={phase}
           />
         </div>
@@ -221,7 +195,7 @@ const handleSpawn = async () => {
                   backdrop-blur 
                   shadow-xl 
                   p-4">
-    <ActionLog logs={logs} />
+    <ActionLog logs={displayedLogs} />
   </div>
 </div>
 
@@ -247,7 +221,7 @@ const handleSpawn = async () => {
             </button>
           )}
 
-          {phase === "BUY_HEX" && (
+          {phase === "PLAYER_ACTION" && (
             <button
               onClick={handleBuyHex}
               className="block w-full mb-2 px-3 py-1 bg-yellow-500 rounded hover:bg-yellow-600"
@@ -256,7 +230,7 @@ const handleSpawn = async () => {
             </button>
           )}
 
-          {phase !== "FREE_SPAWN" && (
+          {phase === "PLAYER_ACTION" && (
             <button
               onClick={handleSpawn}
               className="block w-full mb-2 px-3 py-1 bg-purple-600 rounded hover:bg-purple-700"
