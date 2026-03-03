@@ -133,6 +133,7 @@ export interface CommandResponse {
   phase?: string
 }
 
+
 export const getGameStatus = () => apiRequest<GameStatus>("/status")
 
 export const spawnMinion = (type: string, row: number, col: number) =>
