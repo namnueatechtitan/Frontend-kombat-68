@@ -168,6 +168,7 @@ export default function GameplayPage() {
           <GameBoard
             spawnableHexes={game.spawnableHexes}
             buyableHexes={game.buyableHexes ?? []}
+            minions={game.gameState.minions ?? []}
             phase={phase}
             currentPlayer={game.currentPlayer}
             onHexClick={(row, col, x, y) => {
