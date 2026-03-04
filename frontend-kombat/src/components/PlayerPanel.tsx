@@ -56,6 +56,22 @@ const rowTintByType: Record<MinionType, string> = {
   SUPPORT: "from-amber-700/25 to-yellow-500/10",
 }
 
+const demonBorderColorMap: Record<MinionType, string> = {
+  FIGHTER: "#310500",
+  ASSASSIN: "#720066",
+  DPS: "#001311",
+  TANK: "#D42828",
+  SUPPORT: "#372026",
+}
+
+const humanBorderColorMap: Record<MinionType, string> = {
+  FIGHTER: "#195A45",
+  ASSASSIN: "#6A2834",
+  DPS: "#031A54",
+  TANK: "#D42828",
+  SUPPORT: "#745531",
+}
+
 const normalizeMinionType = (type: string): MinionType => {
   const normalized = type.toUpperCase().replace(/[_\s-]/g, "")
 
@@ -78,9 +94,9 @@ function HpSegmentBar({ hp = 0 }: { hp?: number }) {
         return (
           <span
             key={i}
-            className={`h-3 flex-1 rounded-sm border border-orange-300/45 ${
+            className={`h-3 flex-1 rounded-sm border border-emerald-200/45 ${
               filled
-                ? "bg-gradient-to-b from-orange-200 to-orange-500 shadow-[0_0_6px_rgba(251,146,60,0.85)]"
+                ? "bg-gradient-to-b from-emerald-200 to-emerald-500 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
                 : "bg-black/35"
             }`}
           />
@@ -116,6 +132,7 @@ export default function PlayerPanel({
       }
 
   const imageMap = character === "HUMAN" ? humanImageMap : demonImageMap
+  const borderColorMap = character === "HUMAN" ? humanBorderColorMap : demonBorderColorMap
 
   return (
     <div
@@ -154,7 +171,7 @@ export default function PlayerPanel({
       <div className="mt-3 rounded-xl border border-white/15 overflow-hidden">
         <h3 className="text-2xl tracking-[0.12em] py-2 text-center bg-black/25 border-b border-white/10">Minion</h3>
 
-        <div className="p-2 space-y-2 max-h-[300px] overflow-y-auto">
+        <div className="p-2 space-y-2 max-h-[176px] overflow-y-auto pr-1">
           {minions.length === 0 && (
             <div className="text-center text-sm text-white/70 py-4">No minion deployed</div>
           )}
@@ -166,9 +183,13 @@ export default function PlayerPanel({
               <div
                 key={`${minion.type}-${index}`}
                 className={`relative rounded-[22px] border border-white/20 bg-gradient-to-r ${rowTintByType[type]} overflow-hidden`}
+                style={{ borderColor: borderColorMap[type] }}
               >
                 <div className="flex items-center gap-3 p-2">
-                  <div className="w-[94px] h-[66px] rounded-[16px] bg-black/30 overflow-hidden shrink-0">
+                  <div
+                    className="w-[94px] h-[66px] rounded-[16px] bg-black/30 overflow-hidden shrink-0 border"
+                    style={{ borderColor: borderColorMap[type] }}
+                  >
                     <img
                       src={imageSrc}
                       alt={type}
