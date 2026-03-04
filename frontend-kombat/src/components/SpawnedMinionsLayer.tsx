@@ -13,6 +13,8 @@ import tankHumanImage from "../assets/images/Minion_gameplay/human/tankhuman.png
 export interface BoardMinion {
   ownerId: number
   type: string
+  hp?: number
+  runtimeId?: string
   row?: number
   col?: number
   x?: number
@@ -21,6 +23,7 @@ export interface BoardMinion {
 
 interface Props {
   minions: BoardMinion[]
+  shakingMinionIds?: string[]
   hexWidth: number
   hexHeight: number
   verticalSpacing: number
@@ -30,6 +33,7 @@ interface Props {
 
 interface PositionedMinion {
   key: string
+  runtimeId: string
   type: string
   ownerId: number
   x: number
@@ -58,6 +62,7 @@ const MINION_IMAGE_BY_TYPE: Record<string, string> = {
 
 export default function SpawnedMinionsLayer({
   minions,
+  shakingMinionIds = [],
   hexWidth,
   hexHeight,
   verticalSpacing,
@@ -99,8 +104,10 @@ export default function SpawnedMinionsLayer({
       const centerY = yOffset + hexHeight / 2
 
       hexMinions.forEach((minion, index) => {
+        const runtimeId = minion.runtimeId ?? `${hexKey}-${minion.type}-${index}`
         result.push({
-          key: `${hexKey}-${minion.type}-${index}`,
+          key: runtimeId,
+          runtimeId,
           type: minion.type,
           ownerId: minion.ownerId,
           x: centerX,
@@ -113,6 +120,11 @@ export default function SpawnedMinionsLayer({
 
     return result
   }, [boardPadding, hexGap, hexHeight, hexWidth, minions, verticalSpacing])
+
+  const shakingSet = useMemo(
+    () => new Set(shakingMinionIds),
+    [shakingMinionIds],
+  )
 
   const resolveImageByType = (type: string, ownerId: number) => {
     const normalized = type.toLowerCase().replace(/[_\s-]/g, "")
@@ -144,6 +156,7 @@ export default function SpawnedMinionsLayer({
       {positionedMinions.map((minion) => {
         const imageSrc = resolveImageByType(minion.type, minion.ownerId)
         if (!imageSrc) return null
+        const isShaking = shakingSet.has(minion.runtimeId)
 
         const size = 70
         const offsetStep = 10
@@ -160,6 +173,7 @@ export default function SpawnedMinionsLayer({
             height={size}
             preserveAspectRatio="xMidYMid meet"
             pointerEvents="none"
+            className={isShaking ? "minion-shake" : undefined}
           />
         )
       })}

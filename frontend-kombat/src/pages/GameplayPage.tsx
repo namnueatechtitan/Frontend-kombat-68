@@ -28,11 +28,44 @@ interface SetupSummaryData {
   }
 }
 
+interface RuntimeMinion {
+  ownerId: number
+  type: string
+  hp?: number
+  hpPercent?: number
+  x: number
+  y: number
+  runtimeId: string
+}
+
+const toRuntimeMinions = (
+  minions: Array<{ ownerId: number; type: string; hp?: number; x: number; y: number }>,
+): RuntimeMinion[] => {
+  const seen = new Map<string, number>()
+
+  return minions.map((minion) => {
+    const baseKey = `${minion.ownerId}|${minion.type.toUpperCase()}|${minion.x}|${minion.y}`
+    const index = seen.get(baseKey) ?? 0
+    seen.set(baseKey, index + 1)
+
+    return {
+      ...minion,
+      runtimeId: `${baseKey}|${index}`,
+    }
+  })
+}
+
 export default function GameplayPage() {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
+  const [shakingMinionIds, setShakingMinionIds] = useState<string[]>([])
+  const [isScreenShaking, setIsScreenShaking] = useState(false)
   const lastBackendLogSignatureRef = useRef("")
+  const hpByRuntimeIdRef = useRef<Record<string, number>>({})
+  const maxHpByOwnerTypeRef = useRef<Record<string, number>>({})
+  const shakeClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const screenShakeClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [popup, setPopup] = useState<{
     row: number
     col: number
@@ -42,10 +75,27 @@ export default function GameplayPage() {
 
   const [selectingType, setSelectingType] = useState(false)
   const [setupSummary, setSetupSummary] = useState<SetupSummaryData | null>(null)
+  const pollIntervalMs = game?.gameState.phase === "EXECUTION" ? 250 : 1000
+
+  const ownerTypeKey = (ownerId: number, type: string) =>
+    `${ownerId}|${type.toUpperCase()}`
+
+  const resolveHpPercent = (minion: RuntimeMinion) => {
+    if (typeof minion.hp !== "number") return 100
+    const key = ownerTypeKey(minion.ownerId, minion.type)
+    const knownMax = maxHpByOwnerTypeRef.current[key]
+
+    if (typeof knownMax === "number" && knownMax > 0) {
+      return (minion.hp / knownMax) * 100
+    }
+
+    return minion.hp <= 100 ? minion.hp : 100
+  }
 
   const loadGame = async () => {
     try {
       const data = await getGameStatus()
+      const runtimeMinions = toRuntimeMinions(data.gameState.minions ?? [])
 
       const backendLogs = data.actionLogs ?? []
       const backendLogSignature = JSON.stringify(backendLogs)
@@ -58,6 +108,49 @@ export default function GameplayPage() {
       }
 
       lastBackendLogSignatureRef.current = backendLogSignature
+
+      const currentHpByRuntimeId: Record<string, number> = {}
+      const damagedMinionIds: string[] = []
+
+      runtimeMinions.forEach((minion) => {
+        if (typeof minion.hp !== "number") return
+
+        const key = ownerTypeKey(minion.ownerId, minion.type)
+        const prevMax = maxHpByOwnerTypeRef.current[key] ?? 0
+        if (minion.hp > prevMax) {
+          maxHpByOwnerTypeRef.current[key] = minion.hp
+        }
+
+        currentHpByRuntimeId[minion.runtimeId] = minion.hp
+
+        const prevHp = hpByRuntimeIdRef.current[minion.runtimeId]
+        if (typeof prevHp === "number" && minion.hp < prevHp) {
+          damagedMinionIds.push(minion.runtimeId)
+        }
+      })
+
+      hpByRuntimeIdRef.current = currentHpByRuntimeId
+
+      if (damagedMinionIds.length > 0) {
+        setShakingMinionIds(Array.from(new Set(damagedMinionIds)))
+        setIsScreenShaking(true)
+
+        if (shakeClearTimerRef.current) {
+          clearTimeout(shakeClearTimerRef.current)
+        }
+        if (screenShakeClearTimerRef.current) {
+          clearTimeout(screenShakeClearTimerRef.current)
+        }
+
+        shakeClearTimerRef.current = setTimeout(() => {
+          setShakingMinionIds([])
+        }, 500)
+
+        screenShakeClearTimerRef.current = setTimeout(() => {
+          setIsScreenShaking(false)
+        }, 280)
+      }
+
       setGame(data)
     } catch (err) {
       console.error(err)
@@ -72,6 +165,22 @@ export default function GameplayPage() {
       .then(setSetupSummary)
       .catch((err) => console.error("Failed to load setup summary", err))
   }, [])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void loadGame()
+    }, pollIntervalMs)
+
+    return () => {
+      clearInterval(timer)
+      if (shakeClearTimerRef.current) {
+        clearTimeout(shakeClearTimerRef.current)
+      }
+      if (screenShakeClearTimerRef.current) {
+        clearTimeout(screenShakeClearTimerRef.current)
+      }
+    }
+  }, [pollIntervalMs])
 
   const appendTimelineLog = (text: string) => {
     setTimelineLogs((prev) => [...prev, text])
@@ -145,6 +254,10 @@ export default function GameplayPage() {
   const p2Economy = game.playerEconomy?.["2"]
   const currentPlayerBudget =
     game.playerEconomy?.[String(game.currentPlayer)]?.budget ?? budget
+  const boardMinions = toRuntimeMinions(game.gameState.minions ?? []).map((minion) => ({
+    ...minion,
+    hpPercent: resolveHpPercent(minion),
+  }))
 
   const selectedHexOwnedByCurrentPlayer = popup
     ? game.spawnableHexes.some(
@@ -165,7 +278,7 @@ export default function GameplayPage() {
     : false
 
   const selectedHexOccupied = popup
-    ? game.gameState.minions.some(
+    ? boardMinions.some(
         (minion) => minion.x === popup.row && minion.y === popup.col
       )
     : false
@@ -185,8 +298,8 @@ export default function GameplayPage() {
   const p1Character: Character = setupSummary?.players?.player1?.character ?? "HUMAN"
   const p2Character: Character = setupSummary?.players?.player2?.character ?? "DEMON"
 
-  const p1Minions = (game.gameState.minions ?? []).filter((minion) => minion.ownerId === 1)
-  const p2Minions = (game.gameState.minions ?? []).filter((minion) => minion.ownerId === 2)
+  const p1Minions = boardMinions.filter((minion) => minion.ownerId === 1)
+  const p2Minions = boardMinions.filter((minion) => minion.ownerId === 2)
 
   const currentPlayerCharacter: Character =
     game.currentPlayer === 1 ? p1Character : p2Character
@@ -214,7 +327,9 @@ export default function GameplayPage() {
 
   return (
     <div
-      className="min-h-screen w-full text-white bg-[#111] bg-cover bg-center bg-no-repeat"
+      className={`min-h-screen w-full text-white bg-[#111] bg-cover bg-center bg-no-repeat ${
+        isScreenShaking ? "animate-shake" : ""
+      }`}
       style={{ backgroundImage: `url(${demonSetupBg})` }}
     >
       <div className="min-h-screen bg-black/45">
@@ -238,7 +353,7 @@ export default function GameplayPage() {
 
               <button
                 onClick={handleEndTurn}
-                className="px-5 sm:px-7 py-2 rounded-full font-bold tracking-[0.2em] text-sm bg-gradient-to-r from-orange-400 to-yellow-300 text-black hover:brightness-110 transition"
+                className="px-5 sm:px-7 py-2 rounded-full text-white font-semibold text-sm tracking-[0.2em] transition-all duration-300 transform bg-gradient-to-r from-[#FF3D00] to-[#ECDB46] hover:scale-105 hover:shadow-xl shadow-md hover:shadow-[0_0_25px_rgba(255,120,0,0.7)]"
               >
                 ENDTURN
               </button>
@@ -264,7 +379,8 @@ export default function GameplayPage() {
                 <GameBoard
                   spawnableHexes={game.spawnableHexes}
                   buyableHexes={game.buyableHexes ?? []}
-                  minions={game.gameState.minions ?? []}
+                  minions={boardMinions}
+                  shakingMinionIds={shakingMinionIds}
                   phase={phase}
                   currentPlayer={game.currentPlayer}
                   onHexClick={(row, col, x, y) => {

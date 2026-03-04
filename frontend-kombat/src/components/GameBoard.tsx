@@ -12,6 +12,7 @@ interface Props {
   spawnableHexes: SpawnableHex[]
   buyableHexes: SpawnableHex[]
   minions: BoardMinion[]
+  shakingMinionIds?: string[]
   currentPlayer: number
   phase: TurnPhase
   onHexClick: (
@@ -26,6 +27,7 @@ export default function GameBoard({
   spawnableHexes,
   buyableHexes,
   minions,
+  shakingMinionIds = [],
   currentPlayer,
   phase,
   onHexClick,
@@ -163,6 +165,20 @@ export default function GameBoard({
               .buyable-pulse {
                 animation: buyablePulse 1.2s infinite;
               }
+
+              @keyframes minionShake {
+                0%, 100% { transform: translate(0, 0); }
+                20% { transform: translate(-2px, -1px); }
+                40% { transform: translate(2px, 1px); }
+                60% { transform: translate(-2px, 1px); }
+                80% { transform: translate(2px, -1px); }
+              }
+
+              .minion-shake {
+                animation: minionShake 0.35s ease-in-out 2;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
             `}
           </style>
         </defs>
@@ -186,6 +202,7 @@ export default function GameBoard({
 
         <SpawnedMinionsLayer
           minions={minions}
+          shakingMinionIds={shakingMinionIds}
           hexWidth={hexWidth}
           hexHeight={hexHeight}
           verticalSpacing={verticalSpacing}

@@ -19,6 +19,9 @@ import type { MinionType } from "../types/MinionData"
 interface PanelMinion {
   type: string
   hp?: number
+  hpPercent?: number
+  currentHp?: number
+  health?: number
 }
 
 interface Props {
@@ -83,25 +86,29 @@ const normalizeMinionType = (type: string): MinionType => {
   return "SUPPORT"
 }
 
-function HpSegmentBar({ hp = 0 }: { hp?: number }) {
-  const totalSegments = 10
-  const clampedHp = Math.max(0, Math.min(totalSegments, hp))
+function HpBar({
+  hp = 0,
+  hpPercent,
+}: {
+  hp?: number
+  hpPercent?: number
+}) {
+  const fallbackPercent =
+    hp <= 100 ? hp : 100
+  const resolvedPercent = hpPercent ?? fallbackPercent
+  const clampedPercent = Math.max(0, Math.min(100, resolvedPercent))
 
   return (
-    <div className="flex gap-1 w-full">
-      {Array.from({ length: totalSegments }).map((_, i) => {
-        const filled = i < clampedHp
-        return (
-          <span
-            key={i}
-            className={`h-3 flex-1 rounded-sm border border-emerald-200/45 ${
-              filled
-                ? "bg-gradient-to-b from-[#FF3B1F] to-[#B41200] shadow-[0_0_8px_rgba(180,18,0,0.9)]"
-                : "bg-black/35"
-            }`}
-          />
-        )
-      })}
+    <div className="w-full">
+      <div className="h-3 w-full rounded-sm border border-emerald-200/45 bg-black/35 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-[#FF3B1F] to-[#B41200] shadow-[0_0_8px_rgba(180,18,0,0.9)] transition-[width] duration-300 ease-out"
+          style={{ width: `${clampedPercent}%` }}
+        />
+      </div>
+      <div className="mt-1 text-[10px] text-white/70 leading-none">
+        {Math.round(clampedPercent)}%
+      </div>
     </div>
   )
 }
@@ -179,6 +186,8 @@ export default function PlayerPanel({
           {minions.map((minion, index) => {
             const type = normalizeMinionType(minion.type)
             const imageSrc = imageMap[type]
+            const resolvedHp = minion.hp ?? minion.currentHp ?? minion.health ?? 10
+            const resolvedHpPercent = minion.hpPercent
             return (
               <div
                 key={`${minion.type}-${index}`}
@@ -200,7 +209,7 @@ export default function PlayerPanel({
                   <div className="min-w-0 flex-1">
                     <p className="text-base font-medium tracking-[0.1em] leading-none">{type}</p>
                     <div className="mt-2">
-                      <HpSegmentBar hp={minion.hp ?? 10} />
+                      <HpBar hp={resolvedHp} hpPercent={resolvedHpPercent} />
                     </div>
                   </div>
                 </div>
