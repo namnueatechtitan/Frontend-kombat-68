@@ -66,7 +66,7 @@ const demonBorderColorMap: Record<MinionType, string> = {
 
 const humanBorderColorMap: Record<MinionType, string> = {
   FIGHTER: "#195A45",
-  ASSASSIN: "#6A2834",
+  ASSASSIN: "#42000c",
   DPS: "#031A54",
   TANK: "#D42828",
   SUPPORT: "#745531",
@@ -96,7 +96,7 @@ function HpSegmentBar({ hp = 0 }: { hp?: number }) {
             key={i}
             className={`h-3 flex-1 rounded-sm border border-emerald-200/45 ${
               filled
-                ? "bg-gradient-to-b from-emerald-200 to-emerald-500 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                ? "bg-gradient-to-b from-[#FF3B1F] to-[#B41200] shadow-[0_0_8px_rgba(180,18,0,0.9)]"
                 : "bg-black/35"
             }`}
           />
@@ -136,7 +136,7 @@ export default function PlayerPanel({
 
   return (
     <div
-      className={`w-[320px] xl:w-[350px] rounded-2xl p-3 text-[#FCEBC6] shadow-2xl border backdrop-blur-md ${
+      className={`w-[300px] l:w-[300px] rounded-2xl p-3 text-[#FCEBC6] shadow-2xl border backdrop-blur-md ${
         isPlayerOne
           ? "bg-[linear-gradient(180deg,rgba(65,7,10,0.92),rgba(35,5,7,0.95))] border-[#F15A54]/60"
           : "bg-[linear-gradient(180deg,rgba(45,12,64,0.92),rgba(24,6,32,0.95))] border-[#C084FC]/60"
@@ -185,9 +185,9 @@ export default function PlayerPanel({
                 className={`relative rounded-[22px] border border-white/20 bg-gradient-to-r ${rowTintByType[type]} overflow-hidden`}
                 style={{ borderColor: borderColorMap[type] }}
               >
-                <div className="flex items-center gap-3 p-2">
+                <div className="flex items-center gap-2 p-1">
                   <div
-                    className="w-[94px] h-[66px] rounded-[16px] bg-black/30 overflow-hidden shrink-0 border"
+                    className="w-[70px] h-[50px] rounded-[16px] bg-black/30 overflow-hidden shrink-0 border"
                     style={{ borderColor: borderColorMap[type] }}
                   >
                     <img
@@ -198,7 +198,7 @@ export default function PlayerPanel({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-xl font-bold tracking-[0.2em] leading-none">{type}</p>
+                    <p className="text-base font-medium tracking-[0.1em] leading-none">{type}</p>
                     <div className="mt-2">
                       <HpSegmentBar hp={minion.hp ?? 10} />
                     </div>
