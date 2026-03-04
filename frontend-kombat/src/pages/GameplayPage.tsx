@@ -18,6 +18,10 @@ import SpawnMinionSelectionModal from "../components/SpawnMinionSelectionModal"
 
 type Character = "HUMAN" | "DEMON"
 
+interface Props {
+  onPlayAgain: () => void
+}
+
 interface SetupSummaryData {
   config?: {
     hexPurchaseCost?: number
@@ -55,7 +59,7 @@ const toRuntimeMinions = (
   })
 }
 
-export default function GameplayPage() {
+export default function GameplayPage({ onPlayAgain }: Props) {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
@@ -154,6 +158,10 @@ export default function GameplayPage() {
       }
 
       setGame(data)
+      if (data.gameOver) {
+        setPopup(null)
+        setSelectingType(false)
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -200,7 +208,7 @@ export default function GameplayPage() {
   }
 
   const handleSpawn = async (type: string) => {
-    if (!popup || !game) return
+    if (!popup || !game || game.gameOver) return
 
     try {
       await spawnMinion(type, popup.row, popup.col)
@@ -221,7 +229,7 @@ export default function GameplayPage() {
   }
 
   const handleBuyHex = async () => {
-    if (!popup || !game) return
+    if (!popup || !game || game.gameOver) return
 
     try {
       await buyHex(popup.row, popup.col)
@@ -238,7 +246,7 @@ export default function GameplayPage() {
   }
 
   const handleEndTurn = async () => {
-    if (!game) return
+    if (!game || game.gameOver) return
     try {
       await endTurn()
       await loadGame()
@@ -270,6 +278,7 @@ export default function GameplayPage() {
   const hasBoughtHexThisTurn = lastBoughtHexTurnKey === currentTurnKey
   const currentPlayerBudget =
     game.playerEconomy?.[String(game.currentPlayer)]?.budget ?? budget
+  const isGameOver = game.gameOver
   const boardMinions = toRuntimeMinions(game.gameState.minions ?? []).map((minion) => ({
     ...minion,
     hpPercent: resolveHpPercent(minion),
@@ -305,12 +314,14 @@ export default function GameplayPage() {
   const hexPurchaseCost = setupSummary?.config?.hexPurchaseCost ?? 0
   const canAffordHex = currentPlayerBudget >= hexPurchaseCost
   const canShowBuyHexButton =
+    !isGameOver &&
     phase === "PLAYER_ACTION" &&
     !hasBoughtHexThisTurn &&
     !selectedHexOwnedByCurrentPlayer &&
     selectedHexBuyableByCurrentPlayer
 
   const canShowSpawnMinionButton =
+    !isGameOver &&
     !selectedHexOccupied &&
     ((phase === "PLAYER_ACTION" && selectedHexOwnedByCurrentPlayer) ||
       phase === "FREE_SPAWN")
@@ -344,6 +355,40 @@ export default function GameplayPage() {
   const selectableMinions = factionPool.filter((minion) =>
     availableTypeSet.has(minion.type.toUpperCase())
   )
+  const winnerLabel =
+    game.winner === "P1"
+      ? "Player 1"
+      : game.winner === "P2"
+        ? "Player 2"
+        : game.winner === "TIE"
+          ? "Tie"
+          : game.winner
+  const winnerTheme =
+    game.winner === "P1"
+      ? {
+          glow: "rgba(239,68,68,0.6)",
+          accent: "from-red-500 via-orange-400 to-amber-300",
+          ring: "border-red-300/60",
+          chip: "bg-red-500/20 text-red-200 border-red-300/45",
+        }
+      : game.winner === "P2"
+        ? {
+            glow: "rgba(168,85,247,0.6)",
+            accent: "from-fuchsia-500 via-purple-400 to-violet-300",
+            ring: "border-violet-300/60",
+            chip: "bg-violet-500/20 text-violet-200 border-violet-300/45",
+          }
+        : {
+            glow: "rgba(250,204,21,0.6)",
+            accent: "from-yellow-400 via-amber-300 to-orange-300",
+            ring: "border-amber-300/60",
+            chip: "bg-amber-500/20 text-amber-100 border-amber-300/45",
+          }
+
+  const handleExit = () => {
+    window.open("", "_self")
+    window.close()
+  }
 
   return (
     <div
@@ -386,6 +431,7 @@ export default function GameplayPage() {
 
               <button
                 onClick={handleEndTurn}
+                disabled={isGameOver}
                 className="px-5 sm:px-7 py-2 rounded-full text-white font-semibold text-sm tracking-[0.2em] transition-all duration-300 transform bg-gradient-to-r from-[#FF3D00] to-[#ECDB46] hover:scale-105 hover:shadow-xl shadow-md hover:shadow-[0_0_25px_rgba(255,120,0,0.7)]"
               >
                 ENDTURN
@@ -417,6 +463,7 @@ export default function GameplayPage() {
                   phase={phase}
                   currentPlayer={game.currentPlayer}
                   onHexClick={(row, col, x, y) => {
+                    if (isGameOver) return
                     setSelectingType(false)
                     setPopup({ row, col, x, y })
                   }}
@@ -444,7 +491,7 @@ export default function GameplayPage() {
         </div>
       </div>
 
-      {popup && (
+      {popup && !isGameOver && (
         <>
           <div
             className={`fixed z-[60] w-[250px] rounded-2xl border ${playerTheme.border} ${playerTheme.glow} overflow-hidden`}
@@ -502,6 +549,66 @@ export default function GameplayPage() {
             onSelectMinion={handleSpawn}
           />
         </>
+      )}
+
+      {isGameOver && (
+        <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="relative w-full max-w-[620px]">
+            <div
+              className="pointer-events-none absolute -inset-8 rounded-[40px] blur-3xl opacity-90 animate-game-end-pulse"
+              style={{
+                background: `radial-gradient(circle at center, ${winnerTheme.glow}, rgba(0,0,0,0))`,
+              }}
+            />
+            <div className={`relative rounded-3xl border ${winnerTheme.ring} bg-[linear-gradient(180deg,rgba(35,8,4,0.96),rgba(20,4,3,0.98))] shadow-[0_0_65px_rgba(255,120,0,0.35)] overflow-hidden`}>
+              <div className="pointer-events-none absolute inset-0 opacity-30 animate-game-end-sheen bg-[radial-gradient(circle_at_15%_20%,rgba(255,220,160,0.3),transparent_38%),radial-gradient(circle_at_80%_75%,rgba(255,180,90,0.22),transparent_40%)]" />
+
+              <div className="relative px-6 py-5 border-b border-yellow-400/25 bg-black/25">
+                <div className="absolute top-2 left-4 text-yellow-200/65 text-xs tracking-[0.22em]">
+                  FINAL RESULT
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-black tracking-[0.2em] text-center text-[#FFE9B5] drop-shadow-[0_0_16px_rgba(255,210,120,0.5)]">
+                  GAME END
+                </h2>
+                <div className={`mx-auto mt-3 h-[3px] w-48 rounded-full bg-gradient-to-r ${winnerTheme.accent} shadow-[0_0_18px_rgba(255,190,100,0.55)]`} />
+              </div>
+
+              <div className="relative px-6 py-8 text-center">
+                <p className="text-sm tracking-[0.22em] text-yellow-200/75">WINNER</p>
+                <p className="mt-2 text-4xl sm:text-6xl font-black tracking-[0.08em] text-white drop-shadow-[0_0_24px_rgba(255,180,80,0.5)]">
+                  {winnerLabel}
+                </p>
+                <div className={`mx-auto mt-4 inline-flex items-center gap-2 rounded-full border px-4 py-1 text-xs tracking-[0.16em] ${winnerTheme.chip}`}>
+                  <span className="inline-block h-2 w-2 rounded-full bg-current animate-pulse" />
+                  BATTLE CONCLUDED
+                </div>
+              </div>
+
+              <div className="relative px-6 pb-7 pt-1 flex flex-col sm:flex-row gap-3 sm:justify-center">
+                <button
+                  type="button"
+                  onClick={onPlayAgain}
+                  className="w-full sm:w-[220px] h-[55px] rounded-full text-white font-semibold text-lg transition-all duration-300 transform bg-gradient-to-r from-[#FF3D00] to-[#ECDB46] hover:scale-105 hover:shadow-xl shadow-md hover:shadow-[0_0_25px_rgba(255,120,0,0.7)]"
+                >
+                  Play Again
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExit}
+                  className="w-full sm:w-[220px] h-[55px] rounded-full text-white font-semibold text-lg transition-all duration-300 bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-600 hover:to-blue-500 hover:scale-105 shadow-md hover:shadow-xl"
+                >
+                  Exit
+                </button>
+              </div>
+
+              <div className="pointer-events-none absolute left-4 top-4 h-6 w-6 border-l-2 border-t-2 border-yellow-200/45 rounded-tl-md" />
+              <div className="pointer-events-none absolute right-4 top-4 h-6 w-6 border-r-2 border-t-2 border-yellow-200/45 rounded-tr-md" />
+              <div className="pointer-events-none absolute left-4 bottom-4 h-6 w-6 border-l-2 border-b-2 border-yellow-200/45 rounded-bl-md" />
+              <div className="pointer-events-none absolute right-4 bottom-4 h-6 w-6 border-r-2 border-b-2 border-yellow-200/45 rounded-br-md" />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

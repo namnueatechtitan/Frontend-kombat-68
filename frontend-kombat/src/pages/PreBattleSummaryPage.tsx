@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
 import BackButton from "../components/BackButton"
 import ConfigBoard from "../components/ConfigBoard"
+import AnimatedBackground from "../components/AnimatedBackground"
 import { getSetupSummary, startGame } from "../api/gameApi"
 
 import bg from "../assets/images/background-config.png"
@@ -54,18 +55,15 @@ export default function PreBattlePage({ onBack, onConfirm }: Props) {
   const player2 = players?.player2
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col">
-
-      {/* Background */}
-      <img
-        src={bg}
-        alt="background"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      <div className="absolute inset-0 bg-black/40" />
-
-      {/* Main Content */}
-      <div className="relative z-10 flex flex-col items-center pt-6 px-4 pb-28 flex-1 overflow-y-auto">
+    <AnimatedBackground
+      src={bg}
+      alt="background"
+      overlayClassName="bg-black/40"
+      className="min-h-screen"
+    >
+      <div className="w-full min-h-screen flex flex-col">
+        {/* Main Content */}
+        <div className="flex flex-col items-center pt-6 px-4 pb-28 flex-1 overflow-y-auto">
 
         {/* Logo */}
         <img
@@ -229,14 +227,14 @@ export default function PreBattlePage({ onBack, onConfirm }: Props) {
           </ConfigBoard>
         </div>
 
-      </div>
+        </div>
 
-      {/* Fixed Bottom Buttons */}
-      <div className="fixed bottom-10 left-0 right-0 z-20 py-6 flex justify-center gap-10 backdrop-blur-md">
-        <BackButton onClick={onBack} />
-        <ConfirmButton onClick={handleConfirm} />
+        {/* Fixed Bottom Buttons */}
+        <div className="fixed bottom-10 left-0 right-0 z-20 py-6 flex justify-center gap-10 backdrop-blur-md">
+          <BackButton onClick={onBack} />
+          <ConfirmButton onClick={handleConfirm} />
+        </div>
       </div>
-
-    </div>
+    </AnimatedBackground>
   )
 }

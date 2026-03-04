@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import ConfirmButton from "../components/ConfirmButton"
+import AnimatedBackground from "../components/AnimatedBackground"
 import type { MinionData, MinionType } from "../types/MinionData"
 
 import bg from "../assets/images/Minion setup.png"
@@ -141,24 +142,23 @@ done;`,
   }
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-start">
+    <AnimatedBackground
+      src={bg}
+      alt="background"
+      overlayClassName="bg-black/60"
+      className="min-h-screen"
+    >
+      <div className="min-h-screen w-full flex flex-col items-center">
+        <div className="mt-10 flex flex-col items-center">
+          <img src={logo} alt="logo" className="w-[110px] mb-4" draggable={false} />
+          <h1 className="text-5xl font-extrabold tracking-wide
+            bg-gradient-to-r from-[#f6d27a] to-[#c6932f]
+            bg-clip-text text-transparent">
+            Minion Strategy Setup
+          </h1>
+        </div>
 
-      <img src={bg} alt="background"
-        className="absolute inset-0 w-full h-full object-cover"
-        draggable={false}
-      />
-      <div className="absolute inset-0 bg-black/60" />
-
-      <div className="relative z-10 mt-10 flex flex-col items-center">
-        <img src={logo} alt="logo" className="w-[110px] mb-4" draggable={false} />
-        <h1 className="text-5xl font-extrabold tracking-wide
-          bg-gradient-to-r from-[#f6d27a] to-[#c6932f]
-          bg-clip-text text-transparent">
-          Minion Strategy Setup
-        </h1>
-      </div>
-
-      <div className="relative z-10 mt-10 w-[1200px] h-[600px]
+      <div className="mt-10 w-[1200px] max-w-[95vw] h-[600px]
         rounded-xl
         bg-gradient-to-b from-[#4a2c18] via-[#2e1a0f] to-[#160c06]
         border border-[#c6932f]
@@ -455,7 +455,7 @@ done;`,
         </div>
       </div>
 
-      <div className="relative z-10 flex gap-20 mt-10 mb-16">
+      <div className="flex gap-20 mt-10 mb-16">
         <button
           onClick={onBack}
           className="px-16 py-3 rounded-full
@@ -475,7 +475,8 @@ done;`,
           {error}
         </div>
       )}
-    </div>
+      </div>
+    </AnimatedBackground>
   )
 }
 

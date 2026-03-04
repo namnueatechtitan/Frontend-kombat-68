@@ -2,6 +2,7 @@ import { useState } from "react"
 
 import ConfirmButton from "../components/ConfirmButton"
 import ArrowButton from "../components/ArrowButton"
+import AnimatedBackground from "../components/AnimatedBackground"
 
 // Asse
 import bg from "../assets/images/background-config.png"
@@ -56,11 +57,11 @@ export default function MinionTypePage({ onBack: _onBack, onConfirm }: Props) {
   }
 
   return (
-    <div
-      className={`
-        relative w-full h-full overflow-hidden
-        ${shake ? "animate-shake" : ""}
-      `}
+    <AnimatedBackground
+      src={bg}
+      alt="background"
+      overlayClassName="bg-black/40"
+      className={shake ? "animate-shake" : ""}
     >
       <style>
         {`
@@ -78,16 +79,7 @@ export default function MinionTypePage({ onBack: _onBack, onConfirm }: Props) {
         `}
       </style>
 
-      <img
-        src={bg}
-        alt="background"
-        draggable={false}
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-      />
-
-      <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-
-      <div className="relative z-10 flex flex-col items-center w-full h-full">
+      <div className="flex flex-col items-center w-full h-full">
         <img
           src={logo}
           alt="logo"
@@ -147,6 +139,6 @@ export default function MinionTypePage({ onBack: _onBack, onConfirm }: Props) {
           <ConfirmButton onClick={handleConfirm} />
         </div>
       </div>
-    </div>
+    </AnimatedBackground>
   )
 }

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
+import AnimatedBackground from "../components/AnimatedBackground"
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
 import boardSelectMinion from "../assets/images/boardselectminion.png"
@@ -92,16 +93,13 @@ export default function SelectMinionHumanPage({
 }
 
   return (
-    <div className="relative w-full min-h-screen">
-      <img
-        src={bg}
-        alt="background"
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-        draggable={false}
-      />
-      <div className="absolute inset-0 bg-black/40" />
-
-      <div className="relative z-10 w-full h-full">
+    <AnimatedBackground
+      src={bg}
+      alt="background"
+      overlayClassName="bg-black/40"
+      className="min-h-screen"
+    >
+      <div className="w-full h-full min-h-screen">
         <div className="pt-10 flex justify-center">
           <div className="flex items-center gap-6">
             <img src={logo} alt="logo" className="w-[90px]" draggable={false} />
@@ -304,6 +302,6 @@ export default function SelectMinionHumanPage({
           </div>
         </div>
       )}
-    </div>
+    </AnimatedBackground>
   )
 }

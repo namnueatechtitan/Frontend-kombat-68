@@ -1,5 +1,6 @@
 import { useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
+import AnimatedBackground from "../components/AnimatedBackground"
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
 
@@ -46,23 +47,13 @@ export default function ModePage({ onConfirm }: Props) {
   }
 
   return (
-    <div
-      className={`relative w-full h-full overflow-hidden ${
-        shake ? "animate-shake" : ""
-      }`}
+    <AnimatedBackground
+      src={bg}
+      alt="background"
+      overlayClassName="bg-black/50"
+      className={shake ? "animate-shake" : ""}
     >
-      {/* Background */}
-      <img
-        src={bg}
-        alt="background"
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-        draggable={false}
-      />
-
-      {/* Dark Overlay */}
-      <div className="absolute inset-0 bg-black/50 pointer-events-none" />
-
-      <div className="relative z-10 flex flex-col items-center w-full h-full">
+      <div className="flex flex-col items-center w-full h-full">
 
         {/* Logo */}
         <img
@@ -168,6 +159,6 @@ export default function ModePage({ onConfirm }: Props) {
         </div>
 
       </div>
-    </div>
+    </AnimatedBackground>
   )
 }

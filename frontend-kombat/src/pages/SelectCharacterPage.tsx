@@ -2,6 +2,7 @@ import { useState } from "react"
 
 // Components
 import ConfirmButton from "../components/ConfirmButton"
+import AnimatedBackground from "../components/AnimatedBackground"
 
 // API
 import { setCharacter } from "../api/gameApi.ts"
@@ -64,11 +65,11 @@ export default function SelectCharacterPage({
     : "text-purple-400"
 
   return (
-    <div
-      className={`
-        relative w-full h-full overflow-hidden
-        ${shake ? "animate-shake" : ""}
-      `}
+    <AnimatedBackground
+      src={bg}
+      alt="background"
+      overlayClassName="bg-black/30"
+      className={shake ? "animate-shake" : ""}
     >
       <style>
         {`
@@ -85,19 +86,7 @@ export default function SelectCharacterPage({
           }
         `}
       </style>
-
-      {/* Background */}
-      <img
-        src={bg}
-        alt="background"
-        draggable={false}
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-      />
-
-      {/* Soft dark overlay only (no red/purple tint anymore) */}
-      <div className="absolute inset-0 bg-black/30 pointer-events-none" />
-
-      <div className="relative z-10 flex flex-col items-center w-full h-full">
+      <div className="flex flex-col items-center w-full h-full">
 
         <img
           src={logo}
@@ -215,6 +204,6 @@ export default function SelectCharacterPage({
         </div>
 
       </div>
-    </div>
+    </AnimatedBackground>
   )
 }

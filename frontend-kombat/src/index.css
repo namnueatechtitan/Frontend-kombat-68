@@ -156,6 +156,30 @@ body {
 }
 
 /* ============================= */
+/* Game End Modal */
+/* ============================= */
+
+@keyframes gameEndPulse {
+  0% { opacity: 0.42; transform: scale(0.94); }
+  50% { opacity: 0.88; transform: scale(1.02); }
+  100% { opacity: 0.42; transform: scale(0.94); }
+}
+
+@keyframes gameEndSheen {
+  0% { transform: translateX(-9%) translateY(0%); opacity: 0.2; }
+  50% { transform: translateX(9%) translateY(-1%); opacity: 0.35; }
+  100% { transform: translateX(-9%) translateY(0%); opacity: 0.2; }
+}
+
+.animate-game-end-pulse {
+  animation: gameEndPulse 2.4s ease-in-out infinite;
+}
+
+.animate-game-end-sheen {
+  animation: gameEndSheen 4.4s ease-in-out infinite;
+}
+
+/* ============================= */
 /* Action Log Lively */
 /* ============================= */
 

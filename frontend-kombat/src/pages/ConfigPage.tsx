@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import ConfirmButton from "../components/ConfirmButton"
 import ConfigBoard from "../components/ConfigBoard"
+import AnimatedBackground from "../components/AnimatedBackground"
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
 import { getConfig, saveConfig } from "../api/gameApi.ts"
@@ -56,19 +57,8 @@ export default function ConfigPage({  onConfirm }: Props) {
   }
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
-
-      {/* Background */}
-      <img
-        src={bg}
-        alt="config background"
-        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-        draggable={false}
-      />
-
-      <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-
-      <div className="relative z-10 w-full h-full flex flex-col items-center">
+    <AnimatedBackground src={bg} alt="config background" overlayClassName="bg-black/10">
+      <div className="w-full h-full flex flex-col items-center">
 
         {/* Logo */}
         <img
@@ -156,6 +146,6 @@ export default function ConfigPage({  onConfirm }: Props) {
           />
         </div>
       </div>
-    </div>
+    </AnimatedBackground>
   )
 }
