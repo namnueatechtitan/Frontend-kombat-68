@@ -85,6 +85,7 @@ export type TurnPhase = "FREE_SPAWN" | "PLAYER_ACTION" | "EXECUTION" | "END"
 export interface GameMinion {
   ownerId: number
   type: string
+  hp?: number
   x: number
   y: number
 }

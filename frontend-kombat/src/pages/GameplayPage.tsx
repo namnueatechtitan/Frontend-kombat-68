@@ -182,10 +182,14 @@ export default function GameplayPage() {
     ((phase === "PLAYER_ACTION" && selectedHexOwnedByCurrentPlayer) ||
       phase === "FREE_SPAWN")
 
+  const p1Character: Character = setupSummary?.players?.player1?.character ?? "HUMAN"
+  const p2Character: Character = setupSummary?.players?.player2?.character ?? "DEMON"
+
+  const p1Minions = (game.gameState.minions ?? []).filter((minion) => minion.ownerId === 1)
+  const p2Minions = (game.gameState.minions ?? []).filter((minion) => minion.ownerId === 2)
+
   const currentPlayerCharacter: Character =
-    game.currentPlayer === 1
-      ? setupSummary?.players?.player1?.character ?? "HUMAN"
-      : setupSummary?.players?.player2?.character ?? "DEMON"
+    game.currentPlayer === 1 ? p1Character : p2Character
 
   const playerTheme =
     game.currentPlayer === 1
@@ -251,6 +255,8 @@ export default function GameplayPage() {
                   spawnsLeft={p1Economy?.spawnsLeft ?? spawnsLeft}
                   lastInterest={p1Economy?.lastInterest}
                   phase={phase}
+                  character={p1Character}
+                  minions={p1Minions}
                 />
               </div>
 
@@ -276,6 +282,8 @@ export default function GameplayPage() {
                   spawnsLeft={p2Economy?.spawnsLeft}
                   lastInterest={p2Economy?.lastInterest}
                   phase={phase}
+                  character={p2Character}
+                  minions={p2Minions}
                 />
               </div>
             </div>
