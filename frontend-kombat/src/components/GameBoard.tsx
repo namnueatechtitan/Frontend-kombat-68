@@ -78,6 +78,12 @@ export default function GameBoard({
     return buyableMap[`${row}-${col}`] === currentPlayer
   }
 
+  const currentPlayerBuyableCount = useMemo(
+    () => buyableHexes.filter((hex) => hex.ownerId === currentPlayer).length,
+    [buyableHexes, currentPlayer],
+  )
+  const dimBuyableHighlight = currentPlayerBuyableCount >= 6
+
   const paths = useMemo(() => {
     const arr: { d: string; row: number; col: number }[] = []
 
@@ -133,7 +139,8 @@ export default function GameBoard({
       return {
         stroke: GOLD,
         strokeWidth: 4,
-        className: "cursor-pointer buyable-pulse",
+        strokeOpacity: dimBuyableHighlight ? 0.85 : 1,
+        className: `cursor-pointer ${dimBuyableHighlight ? "buyable-pulse-dim" : "buyable-pulse"}`,
       }
     }
 
@@ -141,6 +148,7 @@ export default function GameBoard({
     return {
       stroke: "#2A2A2A",
       strokeWidth: 2,
+      strokeOpacity: 1,
       className: "cursor-pointer",
     }
   }
@@ -166,6 +174,16 @@ export default function GameBoard({
                 animation: buyablePulse 1.2s infinite;
               }
 
+              @keyframes buyablePulseDim {
+                0% { opacity: 0.85; }
+                50% { opacity: 0.38; }
+                100% { opacity: 0.85; }
+              }
+
+              .buyable-pulse-dim {
+                animation: buyablePulseDim 1.2s infinite;
+              }
+
               @keyframes minionShake {
                 0%, 100% { transform: translate(0, 0); }
                 20% { transform: translate(-2px, -1px); }
@@ -178,6 +196,78 @@ export default function GameBoard({
                 animation: minionShake 0.35s ease-in-out 2;
                 transform-box: fill-box;
                 transform-origin: center;
+              }
+
+              @keyframes minionAuraPulse {
+                0% { opacity: 0.28; transform: scale(0.94); }
+                50% { opacity: 0.52; transform: scale(1.03); }
+                100% { opacity: 0.28; transform: scale(0.94); }
+              }
+
+              @keyframes minionAuraSpin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+
+              @keyframes minionAuraSpinReverse {
+                0% { transform: rotate(360deg); }
+                100% { transform: rotate(0deg); }
+              }
+
+              @keyframes hpRingBeat {
+                0% { opacity: 0.78; }
+                50% { opacity: 1; }
+                100% { opacity: 0.78; }
+              }
+
+              .minion-aura-pulse {
+                animation: minionAuraPulse 1.8s ease-in-out infinite;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-aura-spin {
+                animation: minionAuraSpin 7s linear infinite;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-aura-spin-reverse {
+                animation: minionAuraSpinReverse 9s linear infinite;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-aura-spark {
+                filter: drop-shadow(0 0 5px currentColor);
+              }
+
+              .minion-hp-ring {
+                animation: hpRingBeat 1.2s ease-in-out infinite;
+                transition: stroke-dashoffset 0.28s ease-out;
+              }
+
+              @keyframes minionHitFlash {
+                0% { opacity: 0.78; transform: scale(0.75); }
+                100% { opacity: 0; transform: scale(1.18); }
+              }
+
+              @keyframes minionHitSpark {
+                0% { opacity: 1; transform: scale(0.4); }
+                100% { opacity: 0; transform: scale(1.45); }
+              }
+
+              .minion-hit-flash {
+                animation: minionHitFlash 0.24s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-hit-spark {
+                animation: minionHitSpark 0.28s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+                filter: drop-shadow(0 0 5px rgba(253, 186, 116, 0.9));
               }
             `}
           </style>
@@ -194,6 +284,7 @@ export default function GameBoard({
               fill={getFillColor()}
               stroke={strokeConfig.stroke}
               strokeWidth={strokeConfig.strokeWidth}
+              strokeOpacity={strokeConfig.strokeOpacity}
               className={strokeConfig.className}
               onClick={(e) => onHexClick(row, col, e.clientX, e.clientY)}
             />

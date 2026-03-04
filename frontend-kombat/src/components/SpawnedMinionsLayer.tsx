@@ -14,6 +14,7 @@ export interface BoardMinion {
   ownerId: number
   type: string
   hp?: number
+  hpPercent?: number
   runtimeId?: string
   row?: number
   col?: number
@@ -36,6 +37,8 @@ interface PositionedMinion {
   runtimeId: string
   type: string
   ownerId: number
+  hp?: number
+  hpPercent?: number
   x: number
   y: number
   stackIndex: number
@@ -58,6 +61,22 @@ const MINION_IMAGE_BY_TYPE: Record<string, string> = {
   assassinhuman: assasinHumanImage,
   fighterdemon: fighterDemonImage,
   fighterhuman: fighterHumanImage,
+}
+
+const DEMON_CLASS_COLOR_BY_ROLE: Record<string, string> = {
+  fighter: "#AFAFAF",
+  assassin: "#720066",
+  dps: "#001311",
+  tank: "#D42828",
+  support: "#372026",
+}
+
+const HUMAN_CLASS_COLOR_BY_ROLE: Record<string, string> = {
+  fighter: "#195A45",
+  assassin: "#7B140D",
+  dps: "#0139C9",
+  tank: "#BD3431",
+  support: "#FFB300",
 }
 
 export default function SpawnedMinionsLayer({
@@ -110,6 +129,8 @@ export default function SpawnedMinionsLayer({
           runtimeId,
           type: minion.type,
           ownerId: minion.ownerId,
+          hp: minion.hp,
+          hpPercent: minion.hpPercent,
           x: centerX,
           y: centerY,
           stackIndex: index,
@@ -151,30 +172,213 @@ export default function SpawnedMinionsLayer({
     return undefined
   }
 
+  const resolveRoleByType = (type: string) => {
+    const normalized = type.toLowerCase().replace(/[_\s-]/g, "")
+
+    if (normalized.includes("fight")) return "fighter"
+    if (normalized.includes("assass")) return "assassin"
+    if (normalized.includes("dps")) return "dps"
+    if (normalized.includes("tank")) return "tank"
+    return "support"
+  }
+
+  const resolveHpPercent = (minion: PositionedMinion) => {
+    if (typeof minion.hpPercent === "number") {
+      return Math.max(0, Math.min(100, minion.hpPercent))
+    }
+    if (typeof minion.hp === "number") {
+      const fallback = minion.hp <= 100 ? minion.hp : 100
+      return Math.max(0, Math.min(100, fallback))
+    }
+    return 100
+  }
+
   return (
     <>
       {positionedMinions.map((minion) => {
         const imageSrc = resolveImageByType(minion.type, minion.ownerId)
         if (!imageSrc) return null
         const isShaking = shakingSet.has(minion.runtimeId)
+        const hpPercent = resolveHpPercent(minion)
+        const role = resolveRoleByType(minion.type)
+        const classColorMap =
+          minion.ownerId === 2
+            ? DEMON_CLASS_COLOR_BY_ROLE
+            : HUMAN_CLASS_COLOR_BY_ROLE
+        const auraColor = classColorMap[role]
+        const auraColorSoft = `${auraColor}55`
+        const auraColorStrong = `${auraColor}cc`
+        const hpColor = auraColor
+        const hpColorSoft = `${auraColor}55`
 
-        const size = 70
+        const size = 62
+        const outerRing = size / 2 + 10
+        const progressRadius = size / 2 + 4
+        const progressCircumference = 2 * Math.PI * progressRadius
+        const dashOffset =
+          progressCircumference - (hpPercent / 100) * progressCircumference
         const offsetStep = 10
         const offset =
           (minion.stackIndex - (minion.stackSize - 1) / 2) * offsetStep
+        const centerX = minion.x + offset
+        const centerY = minion.y
+        const clipId = `clip-${minion.runtimeId.replace(/[^a-zA-Z0-9_-]/g, "-")}`
 
         return (
-          <image
+          <g
             key={minion.key}
-            href={imageSrc}
-            x={minion.x - size / 2 + offset}
-            y={minion.y - size / 2}
-            width={size}
-            height={size}
-            preserveAspectRatio="xMidYMid meet"
-            pointerEvents="none"
             className={isShaking ? "minion-shake" : undefined}
-          />
+            pointerEvents="none"
+          >
+            {isShaking && (
+              <>
+                <circle
+                  cx={centerX}
+                  cy={centerY}
+                  r={size / 2 + 8}
+                  fill="#fff7ed"
+                  className="minion-hit-flash"
+                />
+                <g>
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+                    const rad = (angle * Math.PI) / 180
+                    const sparkRadius = size / 2 + 14
+                    const px = centerX + Math.cos(rad) * sparkRadius
+                    const py = centerY + Math.sin(rad) * sparkRadius
+                    return (
+                      <circle
+                        key={`${minion.key}-hit-${angle}`}
+                        cx={px}
+                        cy={py}
+                        r={2.1}
+                        fill="#fde68a"
+                        className="minion-hit-spark"
+                      />
+                    )
+                  })}
+                </g>
+              </>
+            )}
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={outerRing + 6}
+              fill={auraColorSoft}
+              className="minion-aura-pulse"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={outerRing}
+              fill="none"
+              stroke={auraColorStrong}
+              strokeWidth={3}
+              className="minion-aura-spin"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={outerRing + 2}
+              fill="none"
+              stroke={auraColorSoft}
+              strokeWidth={1.2}
+              strokeDasharray="6 8"
+              className="minion-aura-spin-reverse"
+            />
+
+            <g className="minion-aura-spin">
+              {[0, 72, 144, 216, 288].map((angle) => {
+                const rad = (angle * Math.PI) / 180
+                const px = centerX + Math.cos(rad) * (outerRing + 4)
+                const py = centerY + Math.sin(rad) * (outerRing + 4)
+                return (
+                  <circle
+                    key={`${minion.key}-spark-${angle}`}
+                    cx={px}
+                    cy={py}
+                    r={1.8}
+                    fill={auraColorStrong}
+                    className="minion-aura-spark"
+                  />
+                )
+              })}
+            </g>
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={progressRadius}
+              fill="none"
+              stroke="rgba(20,20,20,0.85)"
+              strokeWidth={6}
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={progressRadius}
+              fill="none"
+              stroke={hpColor}
+              strokeWidth={6}
+              strokeLinecap="round"
+              strokeDasharray={progressCircumference}
+              strokeDashoffset={dashOffset}
+              transform={`rotate(-90 ${centerX} ${centerY})`}
+              className="minion-hp-ring"
+              style={{
+                filter: `drop-shadow(0 0 6px ${hpColorSoft})`,
+              }}
+            />
+
+            <clipPath id={clipId}>
+              <circle cx={centerX} cy={centerY} r={size / 2} />
+            </clipPath>
+
+            <image
+              href={imageSrc}
+              x={centerX - size / 2}
+              y={centerY - size / 2}
+              width={size}
+              height={size}
+              preserveAspectRatio="xMidYMid slice"
+              clipPath={`url(#${clipId})`}
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={size / 2}
+              fill="none"
+              stroke={auraColorStrong}
+              strokeWidth={2}
+            />
+
+            <rect
+              x={centerX - 22}
+              y={centerY + size / 2 - 6}
+              width={44}
+              height={16}
+              rx={8}
+              fill="rgba(0,0,0,0.7)"
+              stroke={auraColorStrong}
+              strokeWidth={1}
+            />
+            <text
+              x={centerX}
+              y={centerY + size / 2 + 6}
+              textAnchor="middle"
+              fontSize={10}
+              fontWeight={800}
+              fill="#fef3c7"
+              className="select-none"
+              style={{ textShadow: `0 0 8px ${auraColorStrong}` }}
+            >
+              {Math.round(hpPercent)}%
+            </text>
+          </g>
         )
       })}
     </>

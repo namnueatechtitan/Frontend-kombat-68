@@ -60,7 +60,7 @@ const rowTintByType: Record<MinionType, string> = {
 }
 
 const demonBorderColorMap: Record<MinionType, string> = {
-  FIGHTER: "#310500",
+  FIGHTER: "#AFAFAF",
   ASSASSIN: "#720066",
   DPS: "#001311",
   TANK: "#D42828",
@@ -69,10 +69,10 @@ const demonBorderColorMap: Record<MinionType, string> = {
 
 const humanBorderColorMap: Record<MinionType, string> = {
   FIGHTER: "#195A45",
-  ASSASSIN: "#42000c",
-  DPS: "#031A54",
-  TANK: "#D42828",
-  SUPPORT: "#745531",
+  ASSASSIN: "#7B140D",
+  DPS: "#0139C9",
+  TANK: "#BD3431",
+  SUPPORT: "#FFB300",
 }
 
 const normalizeMinionType = (type: string): MinionType => {
@@ -140,6 +140,7 @@ export default function PlayerPanel({
 
   const imageMap = character === "HUMAN" ? humanImageMap : demonImageMap
   const borderColorMap = character === "HUMAN" ? humanBorderColorMap : demonBorderColorMap
+  const panelScrollClass = isPlayerOne ? "panel-scroll-player1" : "panel-scroll-player2"
 
   return (
     <div
@@ -178,7 +179,7 @@ export default function PlayerPanel({
       <div className="mt-3 rounded-xl border border-white/15 overflow-hidden">
         <h3 className="text-2xl tracking-[0.12em] py-2 text-center bg-black/25 border-b border-white/10">Minion</h3>
 
-        <div className="p-2 space-y-2 max-h-[176px] overflow-y-auto pr-1">
+        <div className={`p-2 space-y-2 max-h-[176px] overflow-y-auto pr-1 ${panelScrollClass}`}>
           {minions.length === 0 && (
             <div className="text-center text-sm text-white/70 py-4">No minion deployed</div>
           )}

@@ -45,7 +45,7 @@ const humanImageMap: Record<MinionType, string> = {
 
 const colorMap: Record<MinionType, string> = {
   FIGHTER: "#195A45",
-  ASSASSIN: "#6A2834",
+  ASSASSIN: "#7B140D",
   DPS: "#031A54",
   TANK: "#D42828",
   SUPPORT: "#745531",

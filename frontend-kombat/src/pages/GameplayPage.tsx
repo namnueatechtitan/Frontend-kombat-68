@@ -59,6 +59,7 @@ export default function GameplayPage() {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
+  const [lastBoughtHexTurnKey, setLastBoughtHexTurnKey] = useState<string | null>(null)
   const [shakingMinionIds, setShakingMinionIds] = useState<string[]>([])
   const [isScreenShaking, setIsScreenShaking] = useState(false)
   const lastBackendLogSignatureRef = useRef("")
@@ -72,6 +73,7 @@ export default function GameplayPage() {
     x: number
     y: number
   } | null>(null)
+  const [bgOffset, setBgOffset] = useState({ x: 0, y: 0 })
 
   const [selectingType, setSelectingType] = useState(false)
   const [setupSummary, setSetupSummary] = useState<SetupSummaryData | null>(null)
@@ -182,6 +184,17 @@ export default function GameplayPage() {
     }
   }, [pollIntervalMs])
 
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 16
+      const y = (e.clientY / window.innerHeight - 0.5) * 16
+      setBgOffset({ x, y })
+    }
+
+    window.addEventListener("mousemove", handleMove)
+    return () => window.removeEventListener("mousemove", handleMove)
+  }, [])
+
   const appendTimelineLog = (text: string) => {
     setTimelineLogs((prev) => [...prev, text])
   }
@@ -212,6 +225,7 @@ export default function GameplayPage() {
 
     try {
       await buyHex(popup.row, popup.col)
+      setLastBoughtHexTurnKey(`${game.gameState.turnNumber}-${game.currentPlayer}`)
 
       appendTimelineLog(
         `Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`
@@ -252,12 +266,17 @@ export default function GameplayPage() {
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
   const p1Economy = game.playerEconomy?.["1"]
   const p2Economy = game.playerEconomy?.["2"]
+  const currentTurnKey = `${turnNumber}-${game.currentPlayer}`
+  const hasBoughtHexThisTurn = lastBoughtHexTurnKey === currentTurnKey
   const currentPlayerBudget =
     game.playerEconomy?.[String(game.currentPlayer)]?.budget ?? budget
   const boardMinions = toRuntimeMinions(game.gameState.minions ?? []).map((minion) => ({
     ...minion,
     hpPercent: resolveHpPercent(minion),
   }))
+  const visibleBuyableHexes = hasBoughtHexThisTurn
+    ? []
+    : (game.buyableHexes ?? [])
 
   const selectedHexOwnedByCurrentPlayer = popup
     ? game.spawnableHexes.some(
@@ -269,7 +288,7 @@ export default function GameplayPage() {
     : false
 
   const selectedHexBuyableByCurrentPlayer = popup
-    ? game.buyableHexes.some(
+    ? visibleBuyableHexes.some(
         (hex) =>
           hex.ownerId === game.currentPlayer &&
           hex.row === popup.row &&
@@ -287,6 +306,7 @@ export default function GameplayPage() {
   const canAffordHex = currentPlayerBudget >= hexPurchaseCost
   const canShowBuyHexButton =
     phase === "PLAYER_ACTION" &&
+    !hasBoughtHexThisTurn &&
     !selectedHexOwnedByCurrentPlayer &&
     selectedHexBuyableByCurrentPlayer
 
@@ -327,12 +347,25 @@ export default function GameplayPage() {
 
   return (
     <div
-      className={`min-h-screen w-full text-white bg-[#111] bg-cover bg-center bg-no-repeat ${
+      className={`relative min-h-screen w-full text-white bg-[#111] overflow-hidden ${
         isScreenShaking ? "animate-shake" : ""
       }`}
-      style={{ backgroundImage: `url(${demonSetupBg})` }}
     >
-      <div className="min-h-screen bg-black/45">
+      <div
+        className="absolute inset-0 animate-drift will-change-transform"
+        style={{ transform: `translate(${bgOffset.x}px, ${bgOffset.y}px)` }}
+      >
+        <img
+          src={demonSetupBg}
+          alt="Gameplay background"
+          className="w-full h-full object-cover animate-cinematic"
+          draggable={false}
+        />
+      </div>
+
+      <div className="absolute inset-0 bg-black/45" />
+
+      <div className="relative z-10 min-h-screen">
         <div className="min-h-screen max-w-[1400px] mx-auto px-3 sm:px-5 lg:px-8 py-4 sm:py-6 flex flex-col justify-center gap-4 lg:gap-6">
           <div className="w-full rounded-xl border border-orange-400/40 bg-black/55 backdrop-blur-sm px-4 lg:px-6 py-3 lg:py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -378,7 +411,7 @@ export default function GameplayPage() {
               <div className="order-1 lg:order-2 flex items-center justify-center min-w-0">
                 <GameBoard
                   spawnableHexes={game.spawnableHexes}
-                  buyableHexes={game.buyableHexes ?? []}
+                  buyableHexes={visibleBuyableHexes}
                   minions={boardMinions}
                   shakingMinionIds={shakingMinionIds}
                   phase={phase}

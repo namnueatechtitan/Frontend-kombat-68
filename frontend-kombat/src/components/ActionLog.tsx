@@ -18,7 +18,8 @@ export default function ActionLog({ logs }: Props) {
   return (
     <div className="w-full h-40 bg-black/70 border-t border-gray-700 p-4">
 
-      <h3 className="text-yellow-400 font-bold mb-2">
+      <h3 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
+        <span className="action-log-pulse-dot" />
         Action Log
       </h3>
 
@@ -32,11 +33,17 @@ export default function ActionLog({ logs }: Props) {
           </div>
         )}
 
-        {logs.map((log, index) => (
-          <div key={index} className="text-gray-300">
-            {log}
-          </div>
-        ))}
+        {logs.map((log, index) => {
+          const isLatest = index === logs.length - 1
+          return (
+            <div
+              key={`${index}-${log}`}
+              className={`action-log-line ${isLatest ? "action-log-line-latest" : ""}`}
+            >
+              {log}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
