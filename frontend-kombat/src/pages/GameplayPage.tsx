@@ -8,9 +8,25 @@ import {
   buyHex,
   endTurn,
   getGameStatus,
+  getSetupSummary,
   spawnMinion,
   type GameStatus,
 } from "../api/gameApi"
+import { humanMinions } from "../data/humanMinions"
+import { demonMinions } from "../data/demonMinions"
+import SpawnMinionSelectionModal from "../components/SpawnMinionSelectionModal"
+
+type Character = "HUMAN" | "DEMON"
+
+interface SetupSummaryData {
+  config?: {
+    hexPurchaseCost?: number
+  }
+  players?: {
+    player1?: { character?: Character }
+    player2?: { character?: Character }
+  }
+}
 
 export default function GameplayPage() {
   const [game, setGame] = useState<GameStatus | null>(null)
@@ -25,6 +41,7 @@ export default function GameplayPage() {
   } | null>(null)
 
   const [selectingType, setSelectingType] = useState(false)
+  const [setupSummary, setSetupSummary] = useState<SetupSummaryData | null>(null)
 
   const loadGame = async () => {
     try {
@@ -51,6 +68,9 @@ export default function GameplayPage() {
 
   useEffect(() => {
     loadGame()
+    getSetupSummary()
+      .then(setSetupSummary)
+      .catch((err) => console.error("Failed to load setup summary", err))
   }, [])
 
   const appendTimelineLog = (text: string) => {
@@ -88,7 +108,6 @@ export default function GameplayPage() {
         `Player ${game.currentPlayer} bought hex (${popup.row}, ${popup.col})`
       )
 
-      setPopup(null)
       await loadGame()
     } catch {
       alert("Buy hex failed")
@@ -124,6 +143,70 @@ export default function GameplayPage() {
   const { phase, turnNumber, budget, spawnsLeft } = game.gameState
   const p1Economy = game.playerEconomy?.["1"]
   const p2Economy = game.playerEconomy?.["2"]
+  const currentPlayerBudget =
+    game.playerEconomy?.[String(game.currentPlayer)]?.budget ?? budget
+
+  const selectedHexOwnedByCurrentPlayer = popup
+    ? game.spawnableHexes.some(
+        (hex) =>
+          hex.ownerId === game.currentPlayer &&
+          hex.row === popup.row &&
+          hex.col === popup.col
+      )
+    : false
+
+  const selectedHexBuyableByCurrentPlayer = popup
+    ? game.buyableHexes.some(
+        (hex) =>
+          hex.ownerId === game.currentPlayer &&
+          hex.row === popup.row &&
+          hex.col === popup.col
+      )
+    : false
+
+  const selectedHexOccupied = popup
+    ? game.gameState.minions.some(
+        (minion) => minion.x === popup.row && minion.y === popup.col
+      )
+    : false
+
+  const hexPurchaseCost = setupSummary?.config?.hexPurchaseCost ?? 0
+  const canAffordHex = currentPlayerBudget >= hexPurchaseCost
+  const canShowBuyHexButton =
+    phase === "PLAYER_ACTION" &&
+    !selectedHexOwnedByCurrentPlayer &&
+    selectedHexBuyableByCurrentPlayer
+
+  const canShowSpawnMinionButton =
+    !selectedHexOccupied &&
+    ((phase === "PLAYER_ACTION" && selectedHexOwnedByCurrentPlayer) ||
+      phase === "FREE_SPAWN")
+
+  const currentPlayerCharacter: Character =
+    game.currentPlayer === 1
+      ? setupSummary?.players?.player1?.character ?? "HUMAN"
+      : setupSummary?.players?.player2?.character ?? "DEMON"
+
+  const playerTheme =
+    game.currentPlayer === 1
+      ? {
+          border: "border-red-400/75",
+          glow: "shadow-[0_0_40px_rgba(248,113,113,0.45)]",
+          action: "from-red-600 to-rose-700",
+          heading: "text-red-200",
+        }
+      : {
+          border: "border-purple-400/75",
+          glow: "shadow-[0_0_40px_rgba(192,132,252,0.45)]",
+          action: "from-purple-600 to-fuchsia-700",
+          heading: "text-purple-200",
+        }
+
+  const factionPool = currentPlayerCharacter === "HUMAN" ? humanMinions : demonMinions
+  const availableTypeSet = new Set((game.availableTypes ?? []).map((type) => type.toUpperCase()))
+  const selectableMinions = factionPool.filter((minion) =>
+    availableTypeSet.has(minion.type.toUpperCase())
+  )
 
   return (
     <div
@@ -205,63 +288,59 @@ export default function GameplayPage() {
       </div>
 
       {popup && (
-        <div
-          className="fixed bg-gray-900 border border-gray-600 p-4 rounded shadow-xl z-50"
-          style={{ left: popup.x, top: popup.y }}
-        >
-          <div className="mb-2 font-bold">
-            Selected {popup.row} {popup.col}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+          <div
+            className={`relative w-full max-w-[420px] rounded-2xl border ${playerTheme.border} ${playerTheme.glow} overflow-hidden`}
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 55%), linear-gradient(145deg, rgba(10,20,35,0.96), rgba(7,10,20,0.96)), repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px)",
+            }}
+          >
+            <div className="p-5 space-y-3">
+              <div className={`text-lg font-extrabold tracking-wide ${playerTheme.heading}`}>
+                Hex ({popup.row}, {popup.col})
+              </div>
+
+              {canShowBuyHexButton && (
+                <button
+                  onClick={handleBuyHex}
+                  disabled={!canAffordHex}
+                  className="w-full py-3 rounded-xl font-bold tracking-wide text-white bg-gradient-to-r from-amber-500 to-yellow-400 enabled:hover:brightness-110 disabled:opacity-45 disabled:cursor-not-allowed transition"
+                >
+                  Buy Hex {hexPurchaseCost > 0 ? `(${hexPurchaseCost})` : ""}
+                </button>
+              )}
+
+              {canShowSpawnMinionButton && !selectingType && (
+                <button
+                  onClick={() => setSelectingType(true)}
+                  className={`w-full py-3 rounded-xl font-bold tracking-wide text-white bg-gradient-to-r ${playerTheme.action} hover:brightness-110 transition`}
+                >
+                  Spawn Minion
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setSelectingType(false)
+                  setPopup(null)
+                }}
+                className="w-full py-3 rounded-xl font-bold tracking-wide text-white bg-gradient-to-r from-red-600 to-rose-700 hover:brightness-110 transition"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
 
-          {phase === "FREE_SPAWN" &&
-            (game.availableTypes ?? []).map((type) => (
-              <button
-                key={type}
-                onClick={() => handleSpawn(type)}
-                className="block w-full mb-2 px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-              >
-                Spawn {type}
-              </button>
-            ))}
-
-          {phase === "PLAYER_ACTION" && !selectingType && (
-            <>
-              <button
-                onClick={handleBuyHex}
-                className="block w-full mb-2 px-3 py-1 bg-yellow-500 rounded hover:bg-yellow-600"
-              >
-                Buy Hex
-              </button>
-
-              <button
-                onClick={() => setSelectingType(true)}
-                className="block w-full mb-2 px-3 py-1 bg-purple-600 rounded hover:bg-purple-700"
-              >
-                Buy Minion
-              </button>
-            </>
-          )}
-
-          {phase === "PLAYER_ACTION" && selectingType &&
-            (game.availableTypes ?? []).map((type) => (
-              <button
-                key={type}
-                onClick={() => handleSpawn(type)}
-                className="block w-full mb-2 px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-              >
-                {type}
-              </button>
-            ))}
-
-          <button
-            onClick={() => {
-              setSelectingType(false)
-              setPopup(null)
-            }}
-            className="block w-full px-3 py-1 bg-red-600 rounded hover:bg-red-700"
-          >
-            Cancel
-          </button>
+          <SpawnMinionSelectionModal
+            open={selectingType}
+            playerTheme={playerTheme}
+            currentPlayerCharacter={currentPlayerCharacter}
+            selectableMinions={selectableMinions}
+            onClose={() => setSelectingType(false)}
+            onSelectMinion={handleSpawn}
+          />
         </div>
       )}
     </div>
