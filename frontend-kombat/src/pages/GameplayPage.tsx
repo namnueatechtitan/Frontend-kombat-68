@@ -288,17 +288,18 @@ export default function GameplayPage() {
       </div>
 
       {popup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+        <>
           <div
-            className={`relative w-full max-w-[420px] rounded-2xl border ${playerTheme.border} ${playerTheme.glow} overflow-hidden`}
+            className={`fixed z-[60] w-[250px] rounded-2xl border ${playerTheme.border} ${playerTheme.glow} overflow-hidden`}
             style={{
+              left: `min(calc(100vw - 270px), ${popup.x + 16}px)`,
+              top: `min(calc(100vh - 230px), ${popup.y - 8}px)`,
               backgroundImage:
-                "radial-gradient(circle at top right, rgba(255,255,255,0.12), transparent 55%), linear-gradient(145deg, rgba(10,20,35,0.96), rgba(7,10,20,0.96)), repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 3px)",
+                "linear-gradient(145deg, rgba(10,20,35,0.95), rgba(7,10,20,0.95))",
             }}
           >
-            <div className="p-5 space-y-3">
-              <div className={`text-lg font-extrabold tracking-wide ${playerTheme.heading}`}>
+            <div className="p-3 space-y-2">
+              <div className={`text-sm font-extrabold tracking-wide ${playerTheme.heading}`}>
                 Hex ({popup.row}, {popup.col})
               </div>
 
@@ -306,7 +307,7 @@ export default function GameplayPage() {
                 <button
                   onClick={handleBuyHex}
                   disabled={!canAffordHex}
-                  className="w-full py-3 rounded-xl font-bold tracking-wide text-white bg-gradient-to-r from-amber-500 to-yellow-400 enabled:hover:brightness-110 disabled:opacity-45 disabled:cursor-not-allowed transition"
+                  className="w-full py-2 rounded-lg text-sm font-bold tracking-wide text-white bg-gradient-to-r from-amber-500 to-yellow-400 enabled:hover:brightness-110 disabled:opacity-45 disabled:cursor-not-allowed transition"
                 >
                   Buy Hex {hexPurchaseCost > 0 ? `(${hexPurchaseCost})` : ""}
                 </button>
@@ -315,7 +316,7 @@ export default function GameplayPage() {
               {canShowSpawnMinionButton && !selectingType && (
                 <button
                   onClick={() => setSelectingType(true)}
-                  className={`w-full py-3 rounded-xl font-bold tracking-wide text-white bg-gradient-to-r ${playerTheme.action} hover:brightness-110 transition`}
+                  className={`w-full py-2 rounded-lg text-sm font-bold tracking-wide text-white bg-gradient-to-r ${playerTheme.action} hover:brightness-110 transition`}
                 >
                   Spawn Minion
                 </button>
@@ -326,7 +327,7 @@ export default function GameplayPage() {
                   setSelectingType(false)
                   setPopup(null)
                 }}
-                className="w-full py-3 rounded-xl font-bold tracking-wide text-white bg-gradient-to-r from-red-600 to-rose-700 hover:brightness-110 transition"
+                className="w-full py-2 rounded-lg text-sm font-bold tracking-wide text-white bg-gradient-to-r from-red-600 to-rose-700 hover:brightness-110 transition"
               >
                 Cancel
               </button>
@@ -335,13 +336,15 @@ export default function GameplayPage() {
 
           <SpawnMinionSelectionModal
             open={selectingType}
+            anchorX={popup.x}
+            anchorY={popup.y}
             playerTheme={playerTheme}
             currentPlayerCharacter={currentPlayerCharacter}
             selectableMinions={selectableMinions}
             onClose={() => setSelectingType(false)}
             onSelectMinion={handleSpawn}
           />
-        </div>
+        </>
       )}
     </div>
   )
