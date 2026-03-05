@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import GameWrapper from "./components/GameWrapper"
 import ArrowButton from "./components/ArrowButton"
@@ -15,7 +15,10 @@ import GameplayPage from "./pages/GameplayPage"
 import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
 import SelectMinionDemonPage from "./pages/SelectMinionDemonPage"
 import PreBattlePage from "./pages/PreBattleSummaryPage"
-import { setMode, setupFull } from "./api/gameApi"
+import { resetGame, setCharacter, setMode, setupFull } from "./api/gameApi"
+import gameStartBgm from "./Soubd_Audio/Game start.mp3"
+import { demonMinions } from "./data/demonMinions"
+import { humanMinions } from "./data/humanMinions"
 
 import type { MinionData, MinionType } from "./types/MinionData"
 
@@ -25,6 +28,12 @@ interface ConfiguredMinion extends MinionData {
 }
 
 function App() {
+  const demonNameByType = new Map(
+    demonMinions.map((minion) => [minion.type, minion.name])
+  )
+  const humanNameByType = new Map(
+    humanMinions.map((minion) => [minion.type, minion.name])
+  )
 
   const [page, setPage] = useState<
     | "start"
@@ -49,12 +58,53 @@ function App() {
 
   const [minionTypeCount, setMinionTypeCount] =
     useState<number>(0)
+  const [selectedMode, setSelectedMode] =
+    useState<"DUEL" | "SOLITAIRE" | "AUTO" | null>(null)
 
   const [minionsByPlayer, setMinionsByPlayer] =
     useState<Record<1 | 2, ConfiguredMinion[]>>({
       1: [],
       2: []
     })
+  const bgmRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    const bgm = new Audio(gameStartBgm)
+    bgm.loop = true
+    bgm.volume = 0.35
+    bgmRef.current = bgm
+
+    const tryPlay = () => {
+      void bgm.play().catch(() => {})
+    }
+
+    // Try autoplay; if blocked by browser policy, retry on first user interaction.
+    tryPlay()
+    const unlockAudio = () => tryPlay()
+    window.addEventListener("pointerdown", unlockAudio, { once: true })
+    window.addEventListener("keydown", unlockAudio, { once: true })
+
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio)
+      window.removeEventListener("keydown", unlockAudio)
+      bgm.pause()
+      bgm.currentTime = 0
+      bgmRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const bgm = bgmRef.current
+    if (!bgm) return
+
+    if (page === "game") {
+      bgm.pause()
+      bgm.currentTime = 0
+      return
+    }
+
+    void bgm.play().catch(() => {})
+  }, [page])
 
   const currentMinions = minionsByPlayer[setupPlayer]
 
@@ -63,6 +113,7 @@ function App() {
   ) => {
     try {
       await setMode(mode)
+      setSelectedMode(mode)
       setPage("minionType")
     } catch (error) {
       console.error("Error:", error)
@@ -88,14 +139,35 @@ function App() {
 
     try {
 
-      await setupFull(
-        setupPlayer,
-        currentMinions.map(m => ({
-          type: m.type,
-          strategy: m.strategy,
-          defenseFactor: m.defenseFactor,
-        }))
-      )
+      const setupPayload = currentMinions.map(m => ({
+        type: m.type,
+        name: m.name,
+        strategy: m.strategy,
+        defenseFactor: m.defenseFactor,
+      }))
+
+      await setupFull(setupPlayer, setupPayload)
+
+      if ((selectedMode === "SOLITAIRE" || selectedMode === "AUTO") && isPlayer1) {
+        const mirroredPayload =
+          selectedMode === "SOLITAIRE"
+            ? (() => {
+                const aiFaction: "HUMAN" | "DEMON" =
+                  currentFaction === "DEMON" ? "HUMAN" : "DEMON"
+                const aiNameMap = aiFaction === "DEMON" ? demonNameByType : humanNameByType
+                return setupPayload.map((minion) => ({
+                  ...minion,
+                  name: aiNameMap.get(minion.type as MinionType) ?? minion.name,
+                }))
+              })()
+            : setupPayload
+
+        await setupFull(2, mirroredPayload)
+        setCurrentFaction(null)
+        setSelectedMinion(null)
+        setPage("preBattle")
+        return
+      }
 
       if (isPlayer1) {
         setSetupPlayer(2)
@@ -127,8 +199,18 @@ function App() {
         setPage("minionType")
         break
       case "minionSetupHuman":
+        if (selectedMode === "SOLITAIRE" || selectedMode === "AUTO") {
+          setPage("minionType")
+        } else {
+          setPage("selectUI")
+        }
+        break
       case "minionSetupDemon":
-        setPage("selectUI")
+        if (selectedMode === "SOLITAIRE" || selectedMode === "AUTO") {
+          setPage("minionType")
+        } else {
+          setPage("selectUI")
+        }
         break
       case "strategy":
         if (currentFaction === "DEMON") {
@@ -138,12 +220,31 @@ function App() {
         }
         break
       case "preBattle":
-        setPage("selectUI")
+        if (selectedMode === "SOLITAIRE" || selectedMode === "AUTO") {
+          setPage(currentFaction === "DEMON" ? "minionSetupDemon" : "minionSetupHuman")
+        } else {
+          setPage("selectUI")
+        }
         break
       case "game":
         setPage("preBattle")
         break
     }
+  }
+
+  const handlePlayAgain = () => {
+    setSetupPlayer(1)
+    setCurrentFaction(null)
+    setSelectedMinion(null)
+    setSelectedMode(null)
+    setMinionTypeCount(0)
+    setMinionsByPlayer({ 1: [], 2: [] })
+    setPage("start")
+
+    void resetGame().catch((error) => {
+      console.error("Reset game failed:", error)
+      alert("Failed to reset backend")
+    })
   }
 
   return (
@@ -183,9 +284,18 @@ function App() {
       {page === "minionType" && (
         <MinionTypePage
           onBack={handleBack}
-          onConfirm={(count) => {
+          onConfirm={async (count) => {
             setMinionTypeCount(count)
             setMinionsByPlayer({ 1: [], 2: [] })
+            setSetupPlayer(1)
+            setCurrentFaction(null)
+            setSelectedMinion(null)
+
+            if (selectedMode === "SOLITAIRE" || selectedMode === "AUTO") {
+              setPage("selectUI")
+              return
+            }
+
             setPage("selectUI")
           }}
         />
@@ -195,13 +305,22 @@ function App() {
         <SelectCharacterPage
           setupPlayer={setupPlayer}
           onBack={handleBack}
-          onConfirm={(uiType) => {
-            setCurrentFaction(uiType)
-            setPage(
-              uiType === "DEMON"
-                ? "minionSetupDemon"
-                : "minionSetupHuman"
-            )
+          onConfirm={async (uiType) => {
+            try {
+              if ((selectedMode === "SOLITAIRE" || selectedMode === "AUTO") && setupPlayer === 1) {
+                const aiType: "HUMAN" | "DEMON" = uiType === "HUMAN" ? "DEMON" : "HUMAN"
+                await setCharacter(2, aiType)
+              }
+              setCurrentFaction(uiType)
+              setPage(
+                uiType === "DEMON"
+                  ? "minionSetupDemon"
+                  : "minionSetupHuman"
+              )
+            } catch (error) {
+              console.error("Failed to set AI character:", error)
+              alert("Failed to save AI character")
+            }
           }}
         />
       )}
@@ -247,12 +366,12 @@ function App() {
           <StrategySetupDemonPage
             minion={selectedMinion}
             onBack={handleBack}
-            onConfirm={(code, defenseFactor) => {
+            onConfirm={(name, code, defenseFactor) => {
               setMinionsByPlayer(prev => ({
                 ...prev,
                 [setupPlayer]: [
                   ...prev[setupPlayer].filter(m => m.type !== selectedMinion.type),
-                  { ...selectedMinion, strategy: code, defenseFactor }
+                  { ...selectedMinion, name, strategy: code, defenseFactor }
                 ]
               }))
               setSelectedMinion(null)
@@ -263,12 +382,12 @@ function App() {
           <StrategySetupHumanPage
             minion={selectedMinion}
             onBack={handleBack}
-            onConfirm={(code, defenseFactor) => {
+            onConfirm={(name, code, defenseFactor) => {
               setMinionsByPlayer(prev => ({
                 ...prev,
                 [setupPlayer]: [
                   ...prev[setupPlayer].filter(m => m.type !== selectedMinion.type),
-                  { ...selectedMinion, strategy: code, defenseFactor }
+                  { ...selectedMinion, name, strategy: code, defenseFactor }
                 ]
               }))
               setSelectedMinion(null)
@@ -288,7 +407,7 @@ function App() {
       )}
 
       {page === "game" && (
-        <GameplayPage onPlayAgain={() => setPage("start")} />
+        <GameplayPage onPlayAgain={handlePlayAgain} />
       )}
 
     </GameWrapper>

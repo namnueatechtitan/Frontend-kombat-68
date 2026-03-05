@@ -18,6 +18,7 @@ import type { MinionType } from "../types/MinionData"
 
 interface PanelMinion {
   type: string
+  kindName?: string
   hp?: number
   hpPercent?: number
   currentHp?: number
@@ -26,6 +27,7 @@ interface PanelMinion {
 
 interface Props {
   playerId: number
+  displayName?: string
   currentPlayer: number
   budget?: number
   spawnsLeft?: number
@@ -115,6 +117,7 @@ function HpBar({
 
 export default function PlayerPanel({
   playerId,
+  displayName,
   currentPlayer,
   budget,
   spawnsLeft,
@@ -124,9 +127,9 @@ export default function PlayerPanel({
   minions = [],
 }: Props) {
   const isActive = currentPlayer === playerId
-  const isPlayerOne = playerId === 1
+  const isHuman = character === "HUMAN"
 
-  const iconSet = isPlayerOne
+  const iconSet = isHuman
     ? {
         budget: budgetP1Icon,
         spawns: spawnsP1Icon,
@@ -140,19 +143,19 @@ export default function PlayerPanel({
 
   const imageMap = character === "HUMAN" ? humanImageMap : demonImageMap
   const borderColorMap = character === "HUMAN" ? humanBorderColorMap : demonBorderColorMap
-  const panelScrollClass = isPlayerOne ? "panel-scroll-player1" : "panel-scroll-player2"
+  const panelScrollClass = isHuman ? "panel-scroll-player1" : "panel-scroll-player2"
 
   return (
     <div
       className={`w-[300px] l:w-[300px] rounded-2xl p-3 text-[#FCEBC6] shadow-2xl border backdrop-blur-md ${
-        isPlayerOne
+        isHuman
           ? "bg-[linear-gradient(180deg,rgba(65,7,10,0.92),rgba(35,5,7,0.95))] border-[#F15A54]/60"
           : "bg-[linear-gradient(180deg,rgba(45,12,64,0.92),rgba(24,6,32,0.95))] border-[#C084FC]/60"
       } ${isActive ? "ring-2 ring-yellow-300/70" : ""}`}
     >
       <div className="rounded-xl border border-white/15 overflow-hidden">
         <h2 className="text-2xl font-extrabold tracking-[0.18em] py-3 text-center bg-black/25 border-b border-white/15">
-          PLAYER {playerId}
+          {displayName ?? `PLAYER ${playerId}`}
         </h2>
 
         <div className="px-3 py-2 bg-black/20 space-y-1 text-sm">
@@ -203,12 +206,14 @@ export default function PlayerPanel({
                     <img
                       src={imageSrc}
                       alt={type}
-                      className="w-full h-full object-cover object-[center_28%] scale-[1.05]"
+                      className="w-full h-full object-cover object-[center_35%] scale-[1]"
                     />
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-base font-medium tracking-[0.1em] leading-none">{type}</p>
+                    <p className="text-base font-medium tracking-[0.1em] leading-none">
+                      {(minion.kindName?.trim() || type).toUpperCase()}
+                    </p>
                     <div className="mt-2">
                       <HpBar hp={resolvedHp} hpPercent={resolvedHpPercent} />
                     </div>

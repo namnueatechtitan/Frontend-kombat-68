@@ -57,6 +57,7 @@ export const saveConfig = <T extends object>(config: T) =>
 
 export interface SetupMinionPayload {
   type: string
+  name: string
   defenseFactor: number
   strategy: string
 }
@@ -85,6 +86,7 @@ export type TurnPhase = "FREE_SPAWN" | "PLAYER_ACTION" | "EXECUTION" | "END"
 export interface GameMinion {
   ownerId: number
   type: string
+  kindName?: string
   hp?: number
   x: number
   y: number
@@ -150,5 +152,10 @@ export const buyHex = (row: number, col: number) =>
 
 export const endTurn = () =>
   apiRequest<CommandResponse>("/end-turn", {
+    method: "POST",
+  })
+
+export const resetGame = () =>
+  apiRequest<string>("/reset", {
     method: "POST",
   })

@@ -6,7 +6,6 @@ import type { MinionData, MinionType } from "../types/MinionData"
 import bg from "../assets/images/Minion setup.png"
 import logo from "../assets/images/logo.png"
 
-// ----- DEMON portrait -----
 import assassinPortrait from "../assets/images/minions/Demon/demon_assassin_preview_portrait.png"
 import fighterPortrait from "../assets/images/minions/Demon/demon_fighter_preview_portrait.png"
 import dpsPortrait from "../assets/images/minions/Demon/demon_dps_preview_portrait.png"
@@ -19,7 +18,7 @@ interface Props {
     defenseFactor?: number
   }
   onBack: () => void
-  onConfirm: (code: string, defenFactor: number) => void
+  onConfirm: (name: string, code: string, defenFactor: number) => void
 }
 
 type TemplateType = "AGGRESSIVE" | "DEFENSIVE" | "RANDOM"
@@ -32,6 +31,34 @@ const portraitMap: Record<MinionType, string> = {
   SUPPORT: supportPortrait,
 }
 
+const colorMap: Record<MinionType, string> = {
+  FIGHTER: "#310500",
+  ASSASSIN: "#720066",
+  DPS: "#0B2A28",
+  TANK: "#5A0B00",
+  SUPPORT: "#372026",
+}
+
+const clamp = (n: number) => Math.max(0, Math.min(255, n))
+
+const shadeHex = (hex: string, amount: number) => {
+  const v = hex.replace("#", "")
+  const r = clamp(parseInt(v.slice(0, 2), 16) + amount)
+  const g = clamp(parseInt(v.slice(2, 4), 16) + amount)
+  const b = clamp(parseInt(v.slice(4, 6), 16) + amount)
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b
+    .toString(16)
+    .padStart(2, "0")}`
+}
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const v = hex.replace("#", "")
+  const r = parseInt(v.slice(0, 2), 16)
+  const g = parseInt(v.slice(2, 4), 16)
+  const b = parseInt(v.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 export default function StrategySetupDemonPage({
   minion,
   onBack,
@@ -39,6 +66,7 @@ export default function StrategySetupDemonPage({
 }: Props) {
 
   const [code, setCode] = useState("")
+  const [minionName, setMinionName] = useState("")
   const [defenFactor, setDefenFactor] = useState(1)
   const [selectedTemplate, setSelectedTemplate] =
     useState<TemplateType | null>(null)
@@ -48,8 +76,17 @@ export default function StrategySetupDemonPage({
 
   useEffect(() => {
     setCode(minion.strategy ?? "")
+    setMinionName(minion.name ?? "")
     setDefenFactor(minion.defenseFactor ?? 1)
   }, [minion])
+
+  const baseColor = colorMap[minion.type]
+  const darkColor = shadeHex(baseColor, -48)
+  const deeperColor = shadeHex(baseColor, -78)
+  const lightColor = shadeHex(baseColor, 44)
+  const defLightColor = shadeHex(baseColor, 60)
+  const defDarkColor = shadeHex(baseColor, -18)
+  const isAssassinDemon = minion.type === "ASSASSIN"
 
   const templates: Record<TemplateType, string> = {
     AGGRESSIVE: `o = opponent;
@@ -133,7 +170,7 @@ done;`,
     try {
       setLoading(true)
       setError("")
-      onConfirm(code, defenFactor)
+      onConfirm(minionName.trim() || minion.name, code, defenFactor)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -158,143 +195,204 @@ done;`,
           </h1>
         </div>
 
-      <div className="mt-10 w-[1200px] max-w-[95vw] h-[600px]
-        rounded-xl
-        bg-gradient-to-b from-[#4a2c18] via-[#2e1a0f] to-[#160c06]
-        border border-[#c6932f]
-        overflow-hidden">
+      <div
+        className="mt-10 w-[1260px] max-w-[96vw] h-[620px] rounded-xl overflow-hidden"
+        style={{
+          backgroundImage: `linear-gradient(145deg, ${hexToRgba(darkColor, 0.94)}, ${hexToRgba(
+            deeperColor,
+            0.98
+          )})`,
+          border: `1px solid ${hexToRgba(lightColor, 0.7)}`,
+          boxShadow: `0 0 35px ${hexToRgba(baseColor, 0.28)}, inset 0 0 40px rgba(0,0,0,0.35)`,
+        }}
+      >
 
-        <div className="h-[50px]
-          flex items-center justify-center
-          text-[#f6d27a]
-          text-2xl font-bold tracking-[0.4em]
-          border-b border-[#c6932f]
-          bg-gradient-to-r from-[#6a3f1f] via-[#8b5a2b] to-[#6a3f1f]">
-          EDITING {minion.name.toUpperCase()}
+        <div className="h-[62px]
+          flex items-center justify-center gap-4 px-5
+          text-[#ffd9be]
+          text-base font-bold tracking-[0.26em]
+          border-b"
+          style={{
+            borderColor: hexToRgba(lightColor, 0.45),
+            backgroundImage: `linear-gradient(90deg, ${hexToRgba(
+              darkColor,
+              0.95
+            )}, ${hexToRgba(baseColor, 0.88)}, ${hexToRgba(darkColor, 0.95)})`,
+          }}
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#fecaca]/45 bg-black/25 px-4 py-1 text-[13px] tracking-[0.2em] text-[#ffe4d0]">
+            <span className="h-2 w-2 rounded-full bg-[#fb7185] shadow-[0_0_10px_rgba(251,113,133,0.9)]" />
+            EDITING
+          </span>
+          <input
+            value={minionName}
+            onChange={(e) => setMinionName(e.target.value)}
+            className="h-10 w-[460px] max-w-[62vw] rounded-lg px-4 text-base font-semibold tracking-[0.08em] text-[#fff6d9] outline-none transition"
+            style={{
+              border: `1px solid ${hexToRgba(lightColor, 0.55)}`,
+              backgroundImage: `linear-gradient(180deg, ${hexToRgba(
+                deeperColor,
+                0.95
+              )}, ${hexToRgba(darkColor, 0.98)})`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 14px ${hexToRgba(baseColor, 0.25)}`,
+            }}
+          />
         </div>
 
-        <div className="flex h-[calc(100%-50px)]">
+        <div className="flex h-[calc(100%-62px)]">
 
           {/* LEFT PANEL */}
-          <div className="w-[30%] relative p-10 text-[#f1d8a5]">
-            <div className="absolute right-0 top-0 bottom-0 w-[2px]
-              bg-gradient-to-b from-transparent via-[#c6932f] to-transparent" />
+          <div className="w-[28%] relative p-10 text-[#f1d8a5]">
+            <div
+              className="absolute right-0 top-0 bottom-0 w-[2px]"
+              style={{
+                backgroundImage: `linear-gradient(180deg, transparent, ${hexToRgba(
+                  lightColor,
+                  0.7
+                )}, transparent)`,
+              }}
+            />
 
             <div className="mb-10 text-center">
-              <div className="text-2xl font-bold tracking-[0.3em]
-                text-[#f6d27a]
-                drop-shadow-[0_0_15px_rgba(246,210,122,0.4)]">
-                {minion.name.toUpperCase()}
+              <div
+                className="text-2xl font-bold tracking-[0.3em] drop-shadow-[0_0_15px_rgba(0,0,0,0.35)]"
+                style={{ color: "#ffe9b5", textShadow: "0 0 10px rgba(255,220,140,0.28)" }}
+              >
+                {minionName.toUpperCase()}
               </div>
               <div className="flex justify-center mt-4">
-                <div className="w-48 h-[2px]
-                  bg-gradient-to-r from-transparent via-[#c6932f] to-transparent" />
+                <div
+                  className="w-48 h-[2px]"
+                  style={{
+                    backgroundImage: `linear-gradient(90deg, transparent, ${hexToRgba(
+                      lightColor,
+                      0.8
+                    )}, transparent)`,
+                  }}
+                />
               </div>
             </div>
 
             <img
               src={portraitMap[minion.type]}
-              alt={minion.name}
-               className="w-[400px] h-[300px] object-contain rounded-lg mb-2 drop-shadow-[0_0_25px_rgba(246,210,122,0.5)]"
+              alt={minionName}
+              className="w-[400px] h-[300px] object-contain rounded-lg mb-2 drop-shadow-[0_0_25px_rgba(246,210,122,0.5)]"
               draggable={false}
             />
-          {/* DEFENSE - DEMON PURPLE */}
 <div className="mt-1 flex justify-center">
   <div className="relative flex items-center justify-center group">
 
-    {/* 🟣 Outer rotating purple ring */}
     <div className="
       absolute w-[100px] h-[100px]
       rounded-full
-      border border-[#a855f7]/40
-      shadow-[0_0_50px_rgba(168,85,247,0.8)]
+      border
       animate-spin
       [animation-duration:18s]
-    " />
+    "
+    style={{
+      borderColor: isAssassinDemon ? "rgba(168,85,247,0.4)" : hexToRgba(baseColor, 0.48),
+      boxShadow: isAssassinDemon
+        ? "0 0 50px rgba(168,85,247,0.8)"
+        : `0 0 50px ${hexToRgba(baseColor, 0.78)}`,
+    }}
+    />
 
-    {/* 🟣 Inner reverse ring */}
     <div className="
       absolute w-[70px] h-[70px]
       rounded-full
-      border border-[#c084fc]/40
+      border
       animate-spin
       [animation-duration:12s]
       [animation-direction:reverse]
-    " />
+    "
+    style={{ borderColor: isAssassinDemon ? "rgba(192,132,252,0.4)" : hexToRgba(defLightColor, 0.42) }}
+    />
 
-    {/* 🟣 Floating purple particles */}
     <div className="absolute w-[160px] h-[160px] pointer-events-none">
-      <div className="absolute top-3 left-1/2 w-2 h-2 bg-[#a855f7] rounded-full animate-ping opacity-80" />
-      <div className="absolute bottom-6 left-6 w-1.5 h-1.5 bg-[#c084fc] rounded-full animate-pulse opacity-70" />
-      <div className="absolute top-10 right-4 w-1.5 h-1.5 bg-[#9333ea] rounded-full animate-ping opacity-60" />
-      <div className="absolute bottom-8 right-8 w-2 h-2 bg-[#d8b4fe] rounded-full animate-pulse opacity-70" />
+      <div className="absolute top-3 left-1/2 w-2 h-2 rounded-full animate-ping opacity-80" style={{ backgroundColor: isAssassinDemon ? "#a855f7" : baseColor }} />
+      <div className="absolute bottom-6 left-6 w-1.5 h-1.5 rounded-full animate-pulse opacity-70" style={{ backgroundColor: isAssassinDemon ? "#c084fc" : defLightColor }} />
+      <div className="absolute top-10 right-4 w-1.5 h-1.5 rounded-full animate-ping opacity-60" style={{ backgroundColor: isAssassinDemon ? "#9333ea" : defDarkColor }} />
+      <div className="absolute bottom-8 right-8 w-2 h-2 rounded-full animate-pulse opacity-70" style={{ backgroundColor: isAssassinDemon ? "#d8b4fe" : shadeHex(defLightColor, 25) }} />
     </div>
 
-    {/* 🟣 Core DEF Badge */}
     <div
       className="
         relative
         flex items-center gap-3 px-6 py-2
         rounded-full
-        bg-gradient-to-r from-[#1a002b] via-[#4c1d95] to-[#1a002b]
-        border border-[#c084fc]
-        text-[#e9d5ff]
-        shadow-[0_0_35px_rgba(168,85,247,0.8)]
+        border
         transition duration-500
-        group-hover:shadow-[0_0_65px_rgba(147,51,234,1)]
+        group-hover:shadow-[0_0_65px_rgba(255,255,255,0.35)]
         z-10
       "
+      style={{
+        backgroundImage: isAssassinDemon
+          ? "linear-gradient(90deg, #1a002b, #4c1d95, #1a002b)"
+          : `linear-gradient(90deg, ${defDarkColor}, ${baseColor}, ${defDarkColor})`,
+        borderColor: isAssassinDemon ? "#c084fc" : hexToRgba(defLightColor, 0.74),
+        color: isAssassinDemon ? "#e9d5ff" : "#f8ead0",
+        boxShadow: isAssassinDemon
+          ? "0 0 35px rgba(168,85,247,0.8)"
+          : `0 0 35px ${hexToRgba(baseColor, 0.8)}`,
+      }}
     >
-      {/* Shield */}
       <svg
         viewBox="0 0 24 24"
         fill="currentColor"
-        className="w-6 h-6 text-[#c084fc]"
+        className="w-6 h-6"
+        style={{ color: isAssassinDemon ? "#c084fc" : defLightColor }}
       >
         <path d="M12 2L4 5v6c0 5.25 3.438 10.125 8 11
         4.563-.875 8-5.75 8-11V5l-8-3z" />
       </svg>
 
-      {/* Minus */}
       <button
         type="button"
         onClick={() => setDefenFactor(p => Math.max(1, p - 1))}
         className="
           w-7 h-7 rounded-full
-          bg-gradient-to-b from-[#c084fc] to-[#7e22ce]
-          text-[#1a002b] font-bold text-lg
+          font-bold text-lg
           flex items-center justify-center
           hover:scale-110
-          hover:shadow-[0_0_15px_rgba(168,85,247,0.9)]
+          hover:shadow-[0_0_15px_rgba(255,255,255,0.35)]
           transition duration-300
         "
+        style={{
+          backgroundImage: isAssassinDemon
+            ? "linear-gradient(180deg, #c084fc, #7e22ce)"
+            : `linear-gradient(180deg, ${defLightColor}, ${baseColor})`,
+          color: isAssassinDemon ? "#1a002b" : defDarkColor,
+        }}
       >
-        −
+        -
       </button>
 
-      {/* Value */}
-      <span className="text-2xl font-bold tracking-widest text-[#f3e8ff]">
+      <span className="text-2xl font-bold tracking-widest" style={{ color: isAssassinDemon ? "#f3e8ff" : "#fff1dc" }}>
         {defenFactor}
       </span>
 
-      {/* Plus */}
       <button
         type="button"
         onClick={() => setDefenFactor(p => Math.min(1000, p + 1))}
         className="
           w-7 h-7 rounded-full
-          bg-gradient-to-b from-[#c084fc] to-[#7e22ce]
-          text-[#1a002b] font-bold text-lg
+          font-bold text-lg
           flex items-center justify-center
           hover:scale-110
-          hover:shadow-[0_0_15px_rgba(168,85,247,0.9)]
+          hover:shadow-[0_0_15px_rgba(255,255,255,0.35)]
           transition duration-300
         "
+        style={{
+          backgroundImage: isAssassinDemon
+            ? "linear-gradient(180deg, #c084fc, #7e22ce)"
+            : `linear-gradient(180deg, ${defLightColor}, ${baseColor})`,
+          color: isAssassinDemon ? "#1a002b" : defDarkColor,
+        }}
       >
         +
       </button>
 
-      <span className="text-sm tracking-[0.3em] text-[#e9d5ff]">
+      <span className="text-sm tracking-[0.3em]" style={{ color: isAssassinDemon ? "#e9d5ff" : "#fff1dc" }}>
         DEF
       </span>
     </div>
@@ -302,59 +400,71 @@ done;`,
   </div>
 </div>
 
-          
           </div>
 
           {/* MIDDLE */}
-          <div className="w-[40%] relative p-10">
-            <div className="absolute right-0 top-0 bottom-0 w-[2px]
-              bg-gradient-to-b from-transparent via-[#c6932f] to-transparent" />
+          <div className="w-[48%] relative p-8">
+            <div
+              className="absolute right-0 top-0 bottom-0 w-[2px]"
+              style={{
+                backgroundImage: `linear-gradient(180deg, transparent, ${hexToRgba(
+                  lightColor,
+                  0.65
+                )}, transparent)`,
+              }}
+            />
 
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full h-full
-                bg-[#2a170d]
-                border border-[#c6932f]
+              className="strategy-editor-scroll w-full h-full
                 rounded-lg p-6
-                text-[#f6e6c4]
-                font-mono resize-none"
+                text-[#f6d27a]
+                font-mono text-[16px] leading-[1.45] resize-none
+                focus:shadow-[0_0_20px_rgba(255,255,255,0.22)]"
+              style={{
+                backgroundImage: `linear-gradient(180deg, ${hexToRgba(
+                  darkColor,
+                  0.96
+                )}, ${hexToRgba(deeperColor, 0.98)})`,
+                border: `1px solid ${hexToRgba(lightColor, 0.62)}`,
+                boxShadow: `inset 0 0 24px ${hexToRgba(baseColor, 0.24)}`,
+                scrollbarColor: `${baseColor} ${hexToRgba(deeperColor, 0.9)}`,
+                ["--strategy-scroll-thumb" as string]: `linear-gradient(180deg, ${shadeHex(
+                  lightColor,
+                  35
+                )} 0%, ${lightColor} 48%, ${baseColor} 100%)`,
+                ["--strategy-scroll-track" as string]: `linear-gradient(180deg, ${hexToRgba(
+                  darkColor,
+                  0.9
+                )}, ${hexToRgba(deeperColor, 0.96)})`,
+              }}
             />
           </div>
 
-          {/* RIGHT PANEL */}
-<div className="w-[30%] p-10 text-[#e6dcff]">
-
-  {/* TITLE */}
+<div className="w-[24%] p-8 text-[#f6e6c4]">
   <div className="mb-8">
 
     <div
-      className="
-        text-lg font-bold tracking-[0.3em]
-        bg-gradient-to-r from-[#f6d27a] to-[#c6932f]
-        bg-clip-text text-transparent
-        drop-shadow-[0_0_6px_rgba(246,210,122,0.6)]
-      "
+      className="text-base font-bold tracking-[0.24em] bg-clip-text text-transparent drop-shadow-[0_0_6px_rgba(0,0,0,0.35)]"
+      style={{ backgroundImage: `linear-gradient(90deg, ${shadeHex(lightColor, 35)}, ${lightColor})` }}
     >
       QUICK TEMPLATES
     </div>
 
     <div className="mt-4 flex justify-center">
       <div
-        className="
-          w-[80%] h-[2px]
-          bg-gradient-to-r
-          from-transparent
-          via-[#4b1d6b]/70
-          to-transparent
-          shadow-[0_0_8px_rgba(75,29,107,0.5)]
-          rounded-full
-        "
+        className="w-[80%] h-[2px] rounded-full"
+        style={{
+          backgroundImage: `linear-gradient(90deg, transparent, ${hexToRgba(lightColor, 0.75)}, transparent)`,
+          boxShadow: `0 0 6px ${hexToRgba(baseColor, 0.6)}`,
+        }}
       />
     </div>
+
   </div>
 
-  {(["AGGRESSIVE", "DEFENSIVE", "RANDOM"] as TemplateType[]).map(type => {
+  {(["AGGRESSIVE","DEFENSIVE","RANDOM"] as TemplateType[]).map(type => {
 
     const iconMap = {
       AGGRESSIVE: (
@@ -389,56 +499,71 @@ done;`,
         key={type}
         onClick={() => handleTemplateClick(type)}
         className={`
-          group relative
-          w-full h-[60px]
-          mb-10 px-12
+          group
+          relative
+          w-full h-[54px]
+          mb-7 px-7
           rounded-full
-          tracking-[0.25em]
+          tracking-[0.16em]
           flex items-center justify-between
           overflow-hidden
           transition duration-300
-          bg-gradient-to-r from-[#1a0026] via-[#4b1d6b] to-[#1a0026]
-          border border-[#6a0dad]/40
-          text-[#e6dcff]
-          shadow-[0_0_25px_rgba(106,13,173,0.35)]
-          hover:shadow-[0_0_40px_rgba(106,13,173,0.55)]
+
+          border
+          text-[#f6e6c4]
+
+          shadow-[0_0_20px_rgba(0,0,0,0.2)]
+          hover:shadow-[0_0_35px_rgba(255,255,255,0.18)]
           hover:scale-[1.02]
+
           ${selectedTemplate === type
-            ? "ring-1 ring-[#8b5cf6] shadow-[0_0_50px_rgba(139,92,246,0.6)]"
+            ? "shadow-[0_0_45px_rgba(246,210,122,0.6)]"
             : ""}
         `}
+        style={{
+          backgroundImage: `linear-gradient(90deg, ${deeperColor}, ${baseColor}, ${deeperColor})`,
+          borderColor: hexToRgba(lightColor, 0.4),
+          boxShadow:
+            selectedTemplate === type
+              ? `0 0 30px ${hexToRgba(baseColor, 0.55)}`
+              : `0 0 16px ${hexToRgba(baseColor, 0.32)}`,
+        }}
       >
 
         <div className="flex items-center gap-4 z-10">
           <div className="
             w-8 h-8 rounded-full
             flex items-center justify-center
-            bg-black/40
-            shadow-[0_0_12px_rgba(106,13,173,0.5)]
+            bg-black/30
           ">
             {iconMap[type]}
           </div>
 
-          <span className="uppercase font-semibold">
+          <span className="uppercase font-semibold text-[15px]">
             {type}
           </span>
         </div>
 
         <div className="
           w-[22px] h-[22px]
+          min-w-[22px] min-h-[22px]
           rounded-full
           flex items-center justify-center
-          bg-gradient-to-b from-[#b58cff] to-[#6a0dad]
-          shadow-[0_0_12px_rgba(139,92,246,0.5)]
+          shadow-[0_0_8px_rgba(0,0,0,0.2)]
           shrink-0
           z-10
-        ">
+        "
+        style={{
+          backgroundImage: `linear-gradient(180deg, ${shadeHex(lightColor, 40)}, ${lightColor})`,
+          boxShadow: `0 0 10px ${hexToRgba(baseColor, 0.5)}`,
+        }}
+        >
           <svg
             width="12"
             height="12"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#14001f"
+            stroke="#3b0000"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -479,7 +604,3 @@ done;`,
     </AnimatedBackground>
   )
 }
-
-
-
-

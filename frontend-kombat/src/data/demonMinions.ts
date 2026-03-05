@@ -17,7 +17,7 @@ import supportPortrait from "../assets/images/minions/Demon/demon_support_previe
 export const demonMinions: MinionData[] = [
   {
     type: "FIGHTER",
-    name: "Kibutsuji Muzan",
+    name: "MUZAN",
     image: fighterPortrait,
     preview: fighterPreview,
   },

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import bg from "../assets/images/start.png"
 import logo from "../assets/images/logo.png"
 import GameButton from "../components/GameButton"
+import { getConfig } from "../api/gameApi"
 
 interface Props {
   onConfig: () => void
@@ -26,12 +27,7 @@ export default function StartPage({ onConfig, onStart }: Props) {
 
   // ---------------- Config preload ----------------
   useEffect(() => {
-    fetch("/api/game/config")
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Request failed")
-        const text = await res.text()
-        return text ? JSON.parse(text) : null
-      })
+    getConfig()
       .then((data) => {
         console.log("CONFIG:", data)
       })
@@ -78,12 +74,16 @@ export default function StartPage({ onConfig, onStart }: Props) {
             label="Start"
             color="orange"
             onClick={onStart}
+            enableClickSfx
+            enableHoverSfx
           />
 
           <GameButton
             label="Config"
             color="green"
             onClick={onConfig}
+            enableClickSfx
+            enableHoverSfx
           />
         </div>
 

@@ -60,9 +60,9 @@ export default function SelectCharacterPage({
 
   const isPlayer1 = setupPlayer === 1
 
-  const playerTextColor = isPlayer1
-    ? "text-red-500"
-    : "text-purple-400"
+  const playerBadgeClass = isPlayer1
+    ? "border-red-300/70 text-red-100 bg-[linear-gradient(90deg,rgba(110,14,20,0.78),rgba(180,30,42,0.72),rgba(110,14,20,0.78))] shadow-[0_0_18px_rgba(255,80,80,0.45)]"
+    : "border-violet-300/70 text-violet-100 bg-[linear-gradient(90deg,rgba(52,18,82,0.78),rgba(106,33,168,0.72),rgba(52,18,82,0.78))] shadow-[0_0_18px_rgba(192,132,252,0.45)]"
 
   return (
     <AnimatedBackground
@@ -99,17 +99,25 @@ export default function SelectCharacterPage({
           className="
             text-4xl md:text-5xl
             font-extrabold tracking-widest
-            bg-[radial-gradient(circle,_#FFFFFF_0%,_#FFB300_60%,_#FFB300_100%)]
+            bg-[linear-gradient(90deg,_#ffd6e2_0%,_#ff6b7a_28%,_#ffe7b3_50%,_#c7b6ff_72%,_#a78bfa_100%)]
             bg-clip-text text-transparent
-            drop-shadow-[0_0_12px_rgba(255,179,0,0.6)]
+            drop-shadow-[0_0_14px_rgba(188,120,255,0.42)]
             mt-6
           "
         >
           SELECT CHARACTER
         </h1>
 
-        <div className={`mt-4 text-2xl font-extrabold tracking-widest ${playerTextColor}`}>
-          PLAYER {setupPlayer}
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <div className={`inline-flex items-center gap-3 px-5 py-2 rounded-full border ${playerBadgeClass}`}>
+            <span className={`h-2.5 w-2.5 rounded-full ${isPlayer1 ? "bg-red-300" : "bg-violet-300"} animate-pulse`} />
+            <span className="text-2xl font-extrabold tracking-[0.18em] drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+              PLAYER {setupPlayer}
+            </span>
+          </div>
+          <div className="text-[11px] tracking-[0.28em] text-white/70">
+            SELECT YOUR FACTION
+          </div>
         </div>
 
         <div className="flex gap-16 items-center justify-center mt-10">

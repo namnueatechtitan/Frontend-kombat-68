@@ -1,7 +1,11 @@
+import type { ReactNode } from "react"
+
+import { playClickSfx } from "../utils/sfx"
+
 interface Props {
   onClick?: () => void
   disabled?: boolean
-  children?: React.ReactNode
+  children?: ReactNode
 }
 
 export default function BackButton({
@@ -9,10 +13,16 @@ export default function BackButton({
   disabled,
   children = "Back",
 }: Props) {
+  function handleClick() {
+    if (disabled) return
+    playClickSfx()
+    onClick?.()
+  }
+
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled}
       className={`
         mt-1

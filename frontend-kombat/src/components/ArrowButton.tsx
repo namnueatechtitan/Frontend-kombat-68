@@ -1,3 +1,5 @@
+import { playClickSfx } from "../utils/sfx"
+
 interface Props {
   direction: "left" | "right"
   onClick: () => void
@@ -10,10 +12,14 @@ export default function ArrowButton({
   className = "",
 }: Props) {
   const isLeft = direction === "left"
+  function handleClick() {
+    playClickSfx()
+    onClick()
+  }
 
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className={`fixed z-50 ${className}`}
     >
       <div

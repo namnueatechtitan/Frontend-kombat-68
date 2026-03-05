@@ -25,6 +25,14 @@ export interface BoardMinion {
 interface Props {
   minions: BoardMinion[]
   shakingMinionIds?: string[]
+  playerCharacters?: Record<number, "HUMAN" | "DEMON">
+  dyingMinions?: Array<{
+    id: string
+    ownerId: number
+    type: string
+    row: number
+    col: number
+  }>
   hexWidth: number
   hexHeight: number
   verticalSpacing: number
@@ -82,12 +90,17 @@ const HUMAN_CLASS_COLOR_BY_ROLE: Record<string, string> = {
 export default function SpawnedMinionsLayer({
   minions,
   shakingMinionIds = [],
+  playerCharacters = { 1: "HUMAN", 2: "DEMON" },
+  dyingMinions = [],
   hexWidth,
   hexHeight,
   verticalSpacing,
   hexGap,
   boardPadding,
 }: Props) {
+  const getCharacter = (ownerId: number): "HUMAN" | "DEMON" =>
+    playerCharacters[ownerId] ?? (ownerId === 1 ? "HUMAN" : "DEMON")
+
   const positionedMinions = useMemo(() => {
     const minionsByHex: Record<string, BoardMinion[]> = {}
 
@@ -153,20 +166,20 @@ export default function SpawnedMinionsLayer({
     const direct = MINION_IMAGE_BY_TYPE[normalized]
     if (direct) return direct
 
-    const roleToOwnerVariant: Record<string, { 1: string; 2: string }> = {
-      fighter: { 1: fighterHumanImage, 2: fighterDemonImage },
-      figther: { 1: fighterHumanImage, 2: fighterDemonImage },
-      assassin: { 1: assasinHumanImage, 2: assasinDemonImage },
-      assasin: { 1: assasinHumanImage, 2: assasinDemonImage },
-      assasinn: { 1: assasinHumanImage, 2: assasinDemonImage },
-      dps: { 1: dpsHumanImage, 2: dpsDemonImage },
-      support: { 1: supportHumanImage, 2: supportDemonImage },
-      tank: { 1: tankHumanImage, 2: tankDemonImage },
+    const roleToCharacterVariant: Record<string, { HUMAN: string; DEMON: string }> = {
+      fighter: { HUMAN: fighterHumanImage, DEMON: fighterDemonImage },
+      figther: { HUMAN: fighterHumanImage, DEMON: fighterDemonImage },
+      assassin: { HUMAN: assasinHumanImage, DEMON: assasinDemonImage },
+      assasin: { HUMAN: assasinHumanImage, DEMON: assasinDemonImage },
+      assasinn: { HUMAN: assasinHumanImage, DEMON: assasinDemonImage },
+      dps: { HUMAN: dpsHumanImage, DEMON: dpsDemonImage },
+      support: { HUMAN: supportHumanImage, DEMON: supportDemonImage },
+      tank: { HUMAN: tankHumanImage, DEMON: tankDemonImage },
     }
 
-    const byRole = roleToOwnerVariant[normalized]
+    const byRole = roleToCharacterVariant[normalized]
     if (byRole) {
-      return ownerId === 2 ? byRole[2] : byRole[1]
+      return byRole[getCharacter(ownerId)]
     }
 
     return undefined
@@ -195,14 +208,147 @@ export default function SpawnedMinionsLayer({
 
   return (
     <>
+      {dyingMinions.map((minion) => {
+        const imageSrc = resolveImageByType(minion.type, minion.ownerId)
+        if (!imageSrc) return null
+
+        const role = resolveRoleByType(minion.type)
+        const ownerCharacter = getCharacter(minion.ownerId)
+        const classColorMap =
+          ownerCharacter === "DEMON"
+            ? DEMON_CLASS_COLOR_BY_ROLE
+            : HUMAN_CLASS_COLOR_BY_ROLE
+        const auraColor = classColorMap[role]
+        const auraColorStrong = `${auraColor}cc`
+
+        const xOffset =
+          minion.col * (hexWidth + hexGap) +
+          (minion.row % 2 ? (hexWidth + hexGap) / 2 : 0) +
+          boardPadding
+        const yOffset = minion.row * (verticalSpacing + hexGap) + boardPadding
+        const centerX = xOffset + hexWidth / 2
+        const centerY = yOffset + hexHeight / 2
+
+        const size = 74
+        const clipId = `death-clip-${minion.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`
+
+        return (
+          <g key={minion.id} pointerEvents="none">
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={size / 2 + 16}
+              fill="#fff4d6"
+              className="minion-death-core"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={size / 2 + 12}
+              fill="none"
+              stroke={auraColorStrong}
+              strokeWidth={6}
+              className="minion-death-wave"
+            />
+
+            <ellipse
+              cx={centerX}
+              cy={centerY + 18}
+              rx={size / 2 + 8}
+              ry={10}
+              fill="rgba(8,6,8,0.85)"
+              className="minion-death-scorch"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={size / 2 + 10}
+              fill="rgba(255,244,214,0.95)"
+              className="minion-death-flash"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={size / 2 + 6}
+              fill="rgba(255,245,235,0.9)"
+              className="minion-death-burst"
+            />
+
+            <circle
+              cx={centerX}
+              cy={centerY}
+              r={size / 2 + 2}
+              fill="none"
+              stroke={auraColorStrong}
+              strokeWidth={4}
+              className="minion-death-ring"
+            />
+
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => {
+              const rad = (angle * Math.PI) / 180
+              const sx = centerX + Math.cos(rad) * (size / 2 + 2)
+              const sy = centerY + Math.sin(rad) * (size / 2 + 2)
+              return (
+                <rect
+                  key={`${minion.id}-death-shard-${angle}`}
+                  x={sx - 1.5}
+                  y={sy - 6}
+                  width={3.5}
+                  height={16}
+                  rx={1.2}
+                  fill={auraColorStrong}
+                  transform={`rotate(${angle} ${sx} ${sy})`}
+                  className="minion-death-shard"
+                />
+              )
+            })}
+
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+              const rad = (angle * Math.PI) / 180
+              const px = centerX + Math.cos(rad) * (size / 2 + 20)
+              const py = centerY + Math.sin(rad) * (size / 2 + 20)
+              return (
+                <circle
+                  key={`${minion.id}-death-spark-${angle}`}
+                  cx={px}
+                  cy={py}
+                  r={2.8}
+                  fill="#fff1a8"
+                  className="minion-death-spark"
+                />
+              )
+            })}
+
+            <clipPath id={clipId}>
+              <circle cx={centerX} cy={centerY} r={size / 2} />
+            </clipPath>
+
+            <image
+              href={imageSrc}
+              x={centerX - size / 2}
+              y={centerY - size / 2}
+              width={size}
+              height={size}
+              preserveAspectRatio="xMidYMid slice"
+              clipPath={`url(#${clipId})`}
+              className="minion-death-fade"
+            />
+          </g>
+        )
+      })}
+
       {positionedMinions.map((minion) => {
         const imageSrc = resolveImageByType(minion.type, minion.ownerId)
         if (!imageSrc) return null
         const isShaking = shakingSet.has(minion.runtimeId)
         const hpPercent = resolveHpPercent(minion)
         const role = resolveRoleByType(minion.type)
+        const ownerCharacter = getCharacter(minion.ownerId)
         const classColorMap =
-          minion.ownerId === 2
+          ownerCharacter === "DEMON"
             ? DEMON_CLASS_COLOR_BY_ROLE
             : HUMAN_CLASS_COLOR_BY_ROLE
         const auraColor = classColorMap[role]
@@ -212,8 +358,8 @@ export default function SpawnedMinionsLayer({
         const hpColorSoft = `${auraColor}55`
 
         const size = 62
-        const outerRing = size / 2 + 10
-        const progressRadius = size / 2 + 4
+        const outerRing = size / 2.3 + 10
+        const progressRadius = size / 2 + 1
         const progressCircumference = 2 * Math.PI * progressRadius
         const dashOffset =
           progressCircumference - (hpPercent / 100) * progressCircumference
@@ -274,7 +420,7 @@ export default function SpawnedMinionsLayer({
               r={outerRing}
               fill="none"
               stroke={auraColorStrong}
-              strokeWidth={3}
+              strokeWidth={5}
               className="minion-aura-spin"
             />
 
@@ -313,16 +459,16 @@ export default function SpawnedMinionsLayer({
               r={progressRadius}
               fill="none"
               stroke="rgba(20,20,20,0.85)"
-              strokeWidth={6}
+              strokeWidth={10}
             />
-
+///
             <circle
               cx={centerX}
               cy={centerY}
               r={progressRadius}
               fill="none"
               stroke={hpColor}
-              strokeWidth={6}
+              strokeWidth={5}
               strokeLinecap="round"
               strokeDasharray={progressCircumference}
               strokeDashoffset={dashOffset}
@@ -353,7 +499,7 @@ export default function SpawnedMinionsLayer({
               r={size / 2}
               fill="none"
               stroke={auraColorStrong}
-              strokeWidth={2}
+              strokeWidth={1.5}
             />
 
             <rect

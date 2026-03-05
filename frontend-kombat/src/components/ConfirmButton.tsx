@@ -1,18 +1,26 @@
+import { playClickSfx } from "../utils/sfx"
+
 interface Props {
   onClick?: () => void
   disabled?: boolean
-  label?: string   // 👈 เพิ่มบรรทัดนี้
+  label?: string
 }
 
 export default function ConfirmButton({
   onClick,
   disabled,
-  label = "Confirm",   // 👈 เพิ่ม default ตรงนี้
+  label = "Confirm",
 }: Props) {
+  function handleClick() {
+    if (disabled) return
+    playClickSfx()
+    onClick?.()
+  }
+
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled}
       className={`
         mt-1
@@ -40,7 +48,7 @@ export default function ConfirmButton({
         }
       `}
     >
-      {label}   {/* 👈 เปลี่ยนจาก Confirm เป็น label */}
+      {label}
     </button>
   )
 }

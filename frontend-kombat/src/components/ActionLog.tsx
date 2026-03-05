@@ -16,19 +16,23 @@ export default function ActionLog({ logs }: Props) {
   }, [logs])
 
   return (
-    <div className="w-full h-40 bg-black/70 border-t border-gray-700 p-4">
-
-      <h3 className="text-yellow-400 font-bold mb-2 flex items-center gap-2">
-        <span className="action-log-pulse-dot" />
-        Action Log
-      </h3>
+    <div className="w-full rounded-xl border border-yellow-400/20 bg-[linear-gradient(180deg,rgba(5,5,8,0.92),rgba(8,8,12,0.96))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,220,140,0.08)]">
+      <div className="mb-2 flex items-center justify-between gap-3 border-b border-yellow-500/15 pb-2">
+        <h3 className="text-yellow-300 font-extrabold tracking-wide flex items-center gap-2">
+          <span className="action-log-pulse-dot" />
+          Action Log
+        </h3>
+        <span className="text-[11px] tracking-[0.14em] text-yellow-200/60">
+          {logs.length} EVENT{logs.length === 1 ? "" : "S"}
+        </span>
+      </div>
 
       <div
         ref={logRef}
-        className="h-24 overflow-y-auto pr-2 text-sm space-y-1 scrollbar-thumb-gray-600"
+        className="action-log-scroll h-[96px] overflow-y-auto pr-2 text-sm space-y-1"
       >
         {logs.length === 0 && (
-          <div className="text-gray-500">
+          <div className="pt-1 text-slate-400/80">
             No actions yet...
           </div>
         )}

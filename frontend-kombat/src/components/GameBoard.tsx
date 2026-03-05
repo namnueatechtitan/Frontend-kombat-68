@@ -8,12 +8,22 @@ interface SpawnableHex {
   ownerId: number
 }
 
+interface DyingMinionEffect {
+  id: string
+  ownerId: number
+  type: string
+  row: number
+  col: number
+}
+
 interface Props {
   spawnableHexes: SpawnableHex[]
   buyableHexes: SpawnableHex[]
   minions: BoardMinion[]
   shakingMinionIds?: string[]
+  dyingMinions?: DyingMinionEffect[]
   currentPlayer: number
+  playerCharacters?: Record<number, "HUMAN" | "DEMON">
   phase: TurnPhase
   onHexClick: (
     row: number,
@@ -23,20 +33,30 @@ interface Props {
   ) => void
 }
 
+type SpawnGlowClass = "spawnable-glow-human" | "spawnable-glow-demon"
+
 export default function GameBoard({
   spawnableHexes,
   buyableHexes,
   minions,
   shakingMinionIds = [],
+  dyingMinions = [],
   currentPlayer,
+  playerCharacters = { 1: "HUMAN", 2: "DEMON" },
   phase,
   onHexClick,
 }: Props) {
 
-  const playerColors: Record<number, string> = {
-    1: "#B1202B",
-    2: "#6E3C82",
+  const characterHexStroke: Record<"HUMAN" | "DEMON", string> = {
+    HUMAN: "#B1202B",
+    DEMON: "#6E3C82",
   }
+  const characterHexTint: Record<"HUMAN" | "DEMON", string> = {
+    HUMAN: "rgba(177,32,43,0.18)",
+    DEMON: "rgba(110,60,130,0.18)",
+  }
+  const getCharacter = (ownerId: number): "HUMAN" | "DEMON" =>
+    playerCharacters[ownerId] ?? (ownerId === 1 ? "HUMAN" : "DEMON")
 
   const GOLD = "#FFD700"
 
@@ -78,6 +98,9 @@ export default function GameBoard({
     return buyableMap[`${row}-${col}`] === currentPlayer
   }
 
+  const isCurrentPlayerSpawnable = (row: number, col: number) =>
+    spawnMap[`${row}-${col}`] === currentPlayer
+
   const currentPlayerBuyableCount = useMemo(
     () => buyableHexes.filter((hex) => hex.ownerId === currentPlayer).length,
     [buyableHexes, currentPlayer],
@@ -117,18 +140,41 @@ export default function GameBoard({
   }, [boardPadding, cols, hexGap, hexHeight, hexWidth, rows, verticalSpacing])
 
   // ✅ พื้นต้องคงที่
-  const getFillColor = () => {
+  const getFillColor = (row: number, col: number) => {
+    const owner = spawnMap[`${row}-${col}`]
+    if (phase === "FREE_SPAWN" && owner === currentPlayer) {
+      return characterHexTint[getCharacter(currentPlayer)]
+    }
     return "#1E1E1E"
+  }
+
+  const getHexOpacity = (row: number, col: number) => {
+    if (phase !== "FREE_SPAWN") return 1
+    return isCurrentPlayerSpawnable(row, col) ? 1 : 0.62
   }
 
   // ✅ เงื่อนไขกรอบใหม่
   const getStrokeConfig = (row: number, col: number) => {
     const key = `${row}-${col}`
 
+    // FREE_SPAWN: เน้นเฉพาะช่องที่ผู้เล่นปัจจุบัน spawn ได้
+    if (phase === "FREE_SPAWN" && isCurrentPlayerSpawnable(row, col)) {
+      const currentCharacter = getCharacter(currentPlayer)
+      const glowClass: SpawnGlowClass =
+        currentCharacter === "HUMAN" ? "spawnable-glow-human" : "spawnable-glow-demon"
+      return {
+        stroke: characterHexStroke[currentCharacter],
+        strokeWidth: 5,
+        strokeOpacity: 1,
+        className: `cursor-pointer ${glowClass}`,
+      }
+    }
+
     // Spawn = ขอบหนา สีตาม owner
     if (spawnMap[key]) {
+      const ownerId = spawnMap[key]
       return {
-        stroke: playerColors[spawnMap[key]],
+        stroke: characterHexStroke[getCharacter(ownerId)],
         strokeWidth: 5,
         className: "cursor-pointer",
       }
@@ -182,6 +228,57 @@ export default function GameBoard({
 
               .buyable-pulse-dim {
                 animation: buyablePulseDim 1.2s infinite;
+              }
+
+              @keyframes spawnGlowPulseP1 {
+                0% {
+                  opacity: 0.9;
+                  filter: drop-shadow(0 0 4px rgba(239,68,68,0.6));
+                }
+                50% {
+                  opacity: 1;
+                  filter: drop-shadow(0 0 10px rgba(239,68,68,0.85));
+                }
+                100% {
+                  opacity: 0.9;
+                  filter: drop-shadow(0 0 4px rgba(239,68,68,0.6));
+                }
+              }
+
+              @keyframes spawnGlowPulseP2 {
+                0% {
+                  opacity: 0.9;
+                  filter: drop-shadow(0 0 4px rgba(168,85,247,0.6));
+                }
+                50% {
+                  opacity: 1;
+                  filter: drop-shadow(0 0 10px rgba(168,85,247,0.85));
+                }
+                100% {
+                  opacity: 0.9;
+                  filter: drop-shadow(0 0 4px rgba(168,85,247,0.6));
+                }
+              }
+
+              @keyframes spawnInnerPulse {
+                0% { fill-opacity: 0.16; }
+                50% { fill-opacity: 0.28; }
+                100% { fill-opacity: 0.16; }
+              }
+
+              .spawnable-glow-human,
+              .spawnable-glow-demon {
+                animation-duration: 1.4s, 1.4s;
+                animation-timing-function: ease-in-out, ease-in-out;
+                animation-iteration-count: infinite, infinite;
+              }
+
+              .spawnable-glow-human {
+                animation-name: spawnGlowPulseP1, spawnInnerPulse;
+              }
+
+              .spawnable-glow-demon {
+                animation-name: spawnGlowPulseP2, spawnInnerPulse;
               }
 
               @keyframes minionShake {
@@ -269,6 +366,108 @@ export default function GameBoard({
                 transform-origin: center;
                 filter: drop-shadow(0 0 5px rgba(253, 186, 116, 0.9));
               }
+
+              @keyframes minionDeathBurst {
+                0% { opacity: 0.98; transform: scale(0.78); }
+                100% { opacity: 0; transform: scale(1.62); }
+              }
+
+              @keyframes minionDeathRing {
+                0% { opacity: 0.95; transform: scale(0.65); }
+                100% { opacity: 0; transform: scale(2.35); }
+              }
+
+              @keyframes minionDeathSpark {
+                0% { opacity: 1; transform: scale(0.5); }
+                100% { opacity: 0; transform: scale(1.8); }
+              }
+
+              @keyframes minionDeathFlash {
+                0% { opacity: 1; transform: scale(0.68); }
+                70% { opacity: 0.35; transform: scale(1.42); }
+                100% { opacity: 0; transform: scale(1.55); }
+              }
+
+              @keyframes minionDeathScorch {
+                0% { opacity: 0; transform: scale(0.6); }
+                30% { opacity: 0.65; transform: scale(1); }
+                100% { opacity: 0; transform: scale(1.2); }
+              }
+
+              @keyframes minionDeathFade {
+                0% { opacity: 1; transform: scale(1); filter: saturate(1); }
+                100% { opacity: 0; transform: scale(0.6); filter: saturate(0.1) brightness(0.5); }
+              }
+
+              @keyframes minionDeathShard {
+                0% { opacity: 1; transform: translate(0, 0) scale(1); }
+                100% { opacity: 0; transform: translate(0, -26px) scale(0.4); }
+              }
+
+              @keyframes minionDeathCore {
+                0% { opacity: 1; transform: scale(0.55); filter: blur(0.5px); }
+                100% { opacity: 0; transform: scale(1.95); filter: blur(2px); }
+              }
+
+              @keyframes minionDeathWave {
+                0% { opacity: 0.95; transform: scale(0.58); }
+                100% { opacity: 0; transform: scale(2.55); }
+              }
+
+              .minion-death-burst {
+                animation: minionDeathBurst 1.15s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-death-ring {
+                animation: minionDeathRing 1.15s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-death-spark {
+                animation: minionDeathSpark 1.1s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+                filter: drop-shadow(0 0 8px rgba(255, 228, 130, 0.95));
+              }
+
+              .minion-death-flash {
+                animation: minionDeathFlash 0.62s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-death-scorch {
+                animation: minionDeathScorch 0.9s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-death-fade {
+                animation: minionDeathFade 1.1s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-death-shard {
+                animation: minionDeathShard 1.1s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-death-core {
+                animation: minionDeathCore 0.85s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+
+              .minion-death-wave {
+                animation: minionDeathWave 1.1s ease-out forwards;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
             `}
           </style>
         </defs>
@@ -281,10 +480,11 @@ export default function GameBoard({
             <path
               key={key}
               d={d}
-              fill={getFillColor()}
+              fill={getFillColor(row, col)}
+              fillOpacity={getHexOpacity(row, col)}
               stroke={strokeConfig.stroke}
               strokeWidth={strokeConfig.strokeWidth}
-              strokeOpacity={strokeConfig.strokeOpacity}
+              strokeOpacity={(strokeConfig.strokeOpacity ?? 1) * getHexOpacity(row, col)}
               className={strokeConfig.className}
               onClick={(e) => onHexClick(row, col, e.clientX, e.clientY)}
             />
@@ -294,6 +494,8 @@ export default function GameBoard({
         <SpawnedMinionsLayer
           minions={minions}
           shakingMinionIds={shakingMinionIds}
+          playerCharacters={playerCharacters}
+          dyingMinions={dyingMinions}
           hexWidth={hexWidth}
           hexHeight={hexHeight}
           verticalSpacing={verticalSpacing}
