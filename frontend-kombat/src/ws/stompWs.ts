@@ -17,10 +17,19 @@ class SimpleStompWs {
   private subscribedDestinations = new Set<string>()
   private subSeq = 0
   private readonly wsUrl = resolveWsUrl()
+  private pendingConnectedCallbacks: Array<() => void> = []
 
   connect(onConnected?: () => void) {
-    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+    if (this.connected) {
       onConnected?.()
+      return
+    }
+
+    if (onConnected) {
+      this.pendingConnectedCallbacks.push(onConnected)
+    }
+
+    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
       return
     }
 
@@ -52,7 +61,11 @@ class SimpleStompWs {
           for (const destination of this.subscriptions.keys()) {
             this.subscribeFrame(destination)
           }
-          onConnected?.()
+          const callbacks = this.pendingConnectedCallbacks
+          this.pendingConnectedCallbacks = []
+          for (const callback of callbacks) {
+            callback()
+          }
           continue
         }
         if (parsed.command === "MESSAGE") {
@@ -73,6 +86,7 @@ class SimpleStompWs {
     this.socket.onclose = () => {
       this.connected = false
       this.subscribedDestinations.clear()
+      this.pendingConnectedCallbacks = []
     }
   }
 
