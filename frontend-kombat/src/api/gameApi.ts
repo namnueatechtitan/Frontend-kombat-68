@@ -1,4 +1,13 @@
-const BASE_URL = "http://localhost:8080/api/game"
+const resolveApiBaseUrl = () => {
+  const configured = import.meta.env.VITE_API_BASE_URL?.trim()
+  if (configured) {
+    return configured
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:8080/api/game`
+}
+
+const BASE_URL = resolveApiBaseUrl()
 
 type Character = "HUMAN" | "DEMON"
 type GameMode = "DUEL" | "SOLITAIRE" | "AUTO"

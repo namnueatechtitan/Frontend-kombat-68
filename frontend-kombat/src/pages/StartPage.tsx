@@ -7,9 +7,10 @@ import { getConfig } from "../api/gameApi"
 interface Props {
   onConfig: () => void
   onStart: () => void
+  onLobby: () => void
 }
 
-export default function StartPage({ onConfig, onStart }: Props) {
+export default function StartPage({ onConfig, onStart, onLobby }: Props) {
 
   // ---------------- Mouse Parallax ----------------
   const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -74,6 +75,14 @@ export default function StartPage({ onConfig, onStart }: Props) {
             label="Start"
             color="orange"
             onClick={onStart}
+            enableClickSfx
+            enableHoverSfx
+          />
+
+          <GameButton
+            label="Lobby"
+            color="blue"
+            onClick={onLobby}
             enableClickSfx
             enableHoverSfx
           />

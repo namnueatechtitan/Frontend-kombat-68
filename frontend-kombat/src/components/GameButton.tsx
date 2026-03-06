@@ -2,7 +2,7 @@ import { playClickSfx } from "../utils/sfx"
 
 interface Props {
   label: string
-  color: "orange" | "green"
+  color: "orange" | "green" | "blue"
   onClick?: () => void
   enableClickSfx?: boolean
   enableHoverSfx?: boolean
@@ -15,8 +15,12 @@ export default function GameButton({
   enableClickSfx = false,
   enableHoverSfx = false,
 }: Props) {
-  const isStart = color === "orange"
-  const borderColor = isStart ? "#FF3D00" : "#00590D"
+  const borderColor =
+    color === "orange"
+      ? "#FF3D00"
+      : color === "green"
+        ? "#00590D"
+        : "#1D4ED8"
 
   function handleClick() {
     if (enableClickSfx) {

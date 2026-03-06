@@ -8,6 +8,7 @@ import ConfigPage from "./pages/ConfigPage"
 import ModePage from "./pages/ModePage"
 import MinionTypePage from "./pages/MinionTypePage"
 import SelectCharacterPage from "./pages/SelectCharacterPage"
+import GameLobbyPage from "./pages/GameLobbyPage"
 
 import StrategySetupHumanPage from "./pages/StrategySetupHumanPage"
 import StrategySetupDemonPage from "./pages/StrategySetupDemonPage"
@@ -39,6 +40,7 @@ function App() {
     | "start"
     | "config"
     | "mode"
+    | "lobby"
     | "minionType"
     | "selectUI"
     | "minionSetupHuman"
@@ -60,6 +62,9 @@ function App() {
     useState<number>(0)
   const [selectedMode, setSelectedMode] =
     useState<"DUEL" | "SOLITAIRE" | "AUTO" | null>(null)
+  const [wsRoomId, setWsRoomId] = useState<string | null>(null)
+  const [wsPlayerName, setWsPlayerName] = useState<string | null>(null)
+  const [wsPlayerId, setWsPlayerId] = useState<number | null>(null)
 
   const [minionsByPlayer, setMinionsByPlayer] =
     useState<Record<1 | 2, ConfiguredMinion[]>>({
@@ -78,7 +83,6 @@ function App() {
       void bgm.play().catch(() => {})
     }
 
-    // Try autoplay; if blocked by browser policy, retry on first user interaction.
     tryPlay()
     const unlockAudio = () => tryPlay()
     window.addEventListener("pointerdown", unlockAudio, { once: true })
@@ -129,7 +133,6 @@ function App() {
   }
 
   const handleFinalConfirm = async () => {
-
     if (currentMinions.length !== minionTypeCount) {
       alert("Please configure all minions first")
       return
@@ -138,7 +141,6 @@ function App() {
     const isPlayer1 = setupPlayer === 1
 
     try {
-
       const setupPayload = currentMinions.map(m => ({
         type: m.type,
         name: m.name,
@@ -149,18 +151,15 @@ function App() {
       await setupFull(setupPlayer, setupPayload)
 
       if ((selectedMode === "SOLITAIRE" || selectedMode === "AUTO") && isPlayer1) {
-        const mirroredPayload =
-          selectedMode === "SOLITAIRE"
-            ? (() => {
-                const aiFaction: "HUMAN" | "DEMON" =
-                  currentFaction === "DEMON" ? "HUMAN" : "DEMON"
-                const aiNameMap = aiFaction === "DEMON" ? demonNameByType : humanNameByType
-                return setupPayload.map((minion) => ({
-                  ...minion,
-                  name: aiNameMap.get(minion.type as MinionType) ?? minion.name,
-                }))
-              })()
-            : setupPayload
+        const mirroredPayload = (() => {
+          const aiFaction: "HUMAN" | "DEMON" =
+            currentFaction === "DEMON" ? "HUMAN" : "DEMON"
+          const aiNameMap = aiFaction === "DEMON" ? demonNameByType : humanNameByType
+          return setupPayload.map((minion) => ({
+            ...minion,
+            name: aiNameMap.get(minion.type as MinionType) ?? minion.name,
+          }))
+        })()
 
         await setupFull(2, mirroredPayload)
         setCurrentFaction(null)
@@ -179,7 +178,6 @@ function App() {
         setSelectedMinion(null)
         setPage("preBattle")
       }
-
     } catch (err) {
       console.error(err)
       alert("Failed to complete setup")
@@ -190,6 +188,9 @@ function App() {
     switch (page) {
       case "config":
       case "mode":
+        setPage("start")
+        break
+      case "lobby":
         setPage("start")
         break
       case "minionType":
@@ -237,6 +238,9 @@ function App() {
     setCurrentFaction(null)
     setSelectedMinion(null)
     setSelectedMode(null)
+    setWsRoomId(null)
+    setWsPlayerName(null)
+    setWsPlayerId(null)
     setMinionTypeCount(0)
     setMinionsByPlayer({ 1: [], 2: [] })
     setPage("start")
@@ -259,11 +263,23 @@ function App() {
         )
       }
     >
-
       {page === "start" && (
         <StartPage
           onConfig={() => setPage("config")}
           onStart={() => setPage("mode")}
+          onLobby={() => setPage("lobby")}
+        />
+      )}
+
+      {page === "lobby" && (
+        <GameLobbyPage
+          onBack={handleBack}
+          onGameStarted={(roomId, playerName, playerId) => {
+            setWsRoomId(roomId)
+            setWsPlayerName(playerName)
+            setWsPlayerId(playerId)
+            setPage("game")
+          }}
         />
       )}
 
@@ -407,11 +423,16 @@ function App() {
       )}
 
       {page === "game" && (
-        <GameplayPage onPlayAgain={handlePlayAgain} />
+        <GameplayPage
+          onPlayAgain={handlePlayAgain}
+          wsRoomId={wsRoomId}
+          localPlayerName={wsPlayerName}
+          localPlayerId={wsPlayerId}
+        />
       )}
-
     </GameWrapper>
   )
 }
 
 export default App
+

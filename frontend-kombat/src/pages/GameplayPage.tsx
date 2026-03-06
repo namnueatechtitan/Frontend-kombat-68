@@ -15,11 +15,15 @@ import {
 import { humanMinions } from "../data/humanMinions"
 import { demonMinions } from "../data/demonMinions"
 import SpawnMinionSelectionModal from "../components/SpawnMinionSelectionModal"
+import { stompWs } from "../ws/stompWs"
 
 type Character = "HUMAN" | "DEMON"
 
 interface Props {
   onPlayAgain: () => void | Promise<void>
+  wsRoomId?: string | null
+  localPlayerName?: string | null
+  localPlayerId?: number | null
 }
 
 interface SetupSummaryData {
@@ -75,7 +79,7 @@ const toRuntimeMinions = (
   })
 }
 
-export default function GameplayPage({ onPlayAgain }: Props) {
+export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, localPlayerId }: Props) {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
@@ -248,13 +252,29 @@ export default function GameplayPage({ onPlayAgain }: Props) {
   }
 
   useEffect(() => {
-    loadGame()
+    if (!wsRoomId) {
+      loadGame()
+    } else {
+      stompWs.connect(() => {
+        stompWs.subscribe(`/topic/game/${wsRoomId}`, (payload) => {
+          if (!payload) return
+          setGame(payload as GameStatus)
+          setLoading(false)
+          if (Array.isArray((payload as GameStatus).actionLogs)) {
+            setTimelineLogs((payload as GameStatus).actionLogs)
+          }
+        })
+      })
+    }
     getSetupSummary()
       .then(setSetupSummary)
       .catch((err) => console.error("Failed to load setup summary", err))
-  }, [])
+  }, [wsRoomId])
 
   useEffect(() => {
+    if (wsRoomId) {
+      return
+    }
     const timer = setInterval(() => {
       void loadGame()
     }, pollIntervalMs)
@@ -271,7 +291,7 @@ export default function GameplayPage({ onPlayAgain }: Props) {
         clearTimeout(deathClearTimerRef.current)
       }
     }
-  }, [pollIntervalMs])
+  }, [pollIntervalMs, wsRoomId])
 
   useEffect(() => {
     const handleMove = (e: MouseEvent) => {
@@ -292,6 +312,19 @@ export default function GameplayPage({ onPlayAgain }: Props) {
     if (!popup || !game || game.gameOver) return
 
     try {
+      if (wsRoomId) {
+        if (isRemotePlayerTurn) return
+        stompWs.send("/app/player-action", {
+          roomId: wsRoomId,
+          actionType: "SPAWN",
+          type,
+          row: popup.row,
+          col: popup.col,
+        })
+        setSelectingType(false)
+        setPopup(null)
+        return
+      }
       await spawnMinion(type, popup.row, popup.col)
 
       appendTimelineLog(
@@ -313,6 +346,18 @@ export default function GameplayPage({ onPlayAgain }: Props) {
     if (!popup || !game || game.gameOver) return
 
     try {
+      if (wsRoomId) {
+        if (isRemotePlayerTurn) return
+        stompWs.send("/app/player-action", {
+          roomId: wsRoomId,
+          actionType: "BUY_HEX",
+          row: popup.row,
+          col: popup.col,
+        })
+        setSelectingType(false)
+        setPopup(null)
+        return
+      }
       await buyHex(popup.row, popup.col)
       setLastBoughtHexTurnKey(`${game.gameState.turnNumber}-${game.currentPlayer}`)
 
@@ -329,6 +374,14 @@ export default function GameplayPage({ onPlayAgain }: Props) {
   const handleEndTurn = async () => {
     if (!game || game.gameOver) return
     try {
+      if (wsRoomId) {
+        if (isRemotePlayerTurn) return
+        stompWs.send("/app/player-action", {
+          roomId: wsRoomId,
+          actionType: "END_TURN",
+        })
+        return
+      }
       await endTurn()
       await loadGame()
     } catch {
@@ -363,18 +416,21 @@ export default function GameplayPage({ onPlayAgain }: Props) {
   const isSolitaire = setupSummary?.mode === "SOLITAIRE"
   const isAutoMode = setupSummary?.mode === "AUTO"
   const isBotTurn = isAutoMode || (isSolitaire && game.currentPlayer === 2)
+  const isRemotePlayerTurn = !!wsRoomId && localPlayerId != null && localPlayerId !== game.currentPlayer
+  const isInteractiveTurn = !isBotTurn && !isRemotePlayerTurn
   const boardMinions = toRuntimeMinions(game.gameState.minions ?? []).map((minion) => ({
     ...minion,
     hpPercent: resolveHpPercent(minion),
   }))
+  const shouldUseSetupNames = !wsRoomId
   const setupNameMap = new Map<string, string>()
-  ;(setupSummary?.players?.player1?.definedMinions ?? []).forEach((m) => {
+  ;((shouldUseSetupNames ? setupSummary?.players?.player1?.definedMinions : []) ?? []).forEach((m) => {
     const configuredName = m.kindName ?? m.name
     if (m.type && configuredName) {
       setupNameMap.set(`1|${m.type.toUpperCase()}`, configuredName)
     }
   })
-  ;(setupSummary?.players?.player2?.definedMinions ?? []).forEach((m) => {
+  ;((shouldUseSetupNames ? setupSummary?.players?.player2?.definedMinions : []) ?? []).forEach((m) => {
     const configuredName = m.kindName ?? m.name
     if (m.type && configuredName) {
       setupNameMap.set(`2|${m.type.toUpperCase()}`, configuredName)
@@ -429,7 +485,7 @@ export default function GameplayPage({ onPlayAgain }: Props) {
   const canAffordHex = currentPlayerBudget >= hexPurchaseCost
   const canShowBuyHexButton =
     !isGameOver &&
-    !isBotTurn &&
+    isInteractiveTurn &&
     phase === "PLAYER_ACTION" &&
     !hasBoughtHexThisTurn &&
     !selectedHexOwnedByCurrentPlayer &&
@@ -437,7 +493,7 @@ export default function GameplayPage({ onPlayAgain }: Props) {
 
   const canShowSpawnMinionButton =
     !isGameOver &&
-    !isBotTurn &&
+    isInteractiveTurn &&
     !selectedHexOccupied &&
     ((phase === "PLAYER_ACTION" && selectedHexOwnedByCurrentPlayer) ||
       (phase === "FREE_SPAWN" && selectedHexOwnedByCurrentPlayer))
@@ -537,7 +593,7 @@ export default function GameplayPage({ onPlayAgain }: Props) {
               <div className="flex items-center gap-4 min-w-0">
                 <img src={logoImage} alt="Game logo" className="w-12 h-12 lg:w-14 lg:h-14 object-contain" />
                 <div className="text-sm sm:text-base lg:text-lg font-bold tracking-wide text-yellow-300">
-                  TURN {turnNumber} Â· PLAYER {game.currentPlayer}
+                  TURN {turnNumber} · PLAYER {game.currentPlayer}{wsRoomId && localPlayerId != null ? ` (YOU: P${localPlayerId}${localPlayerName ? ` ${localPlayerName}` : ""})` : ""}
                 </div>
               </div>
 
@@ -551,10 +607,10 @@ export default function GameplayPage({ onPlayAgain }: Props) {
 
               <button
                 onClick={handleEndTurn}
-                disabled={isGameOver || isBotTurn}
+                disabled={isGameOver || !isInteractiveTurn}
                 className="px-5 sm:px-7 py-2 rounded-full text-white font-semibold text-sm tracking-[0.2em] transition-all duration-300 transform bg-gradient-to-r from-[#FF3D00] to-[#ECDB46] hover:scale-105 hover:shadow-xl shadow-md hover:shadow-[0_0_25px_rgba(255,120,0,0.7)]"
               >
-                {isAutoMode ? "AUTO RUNNING" : isBotTurn ? "BOT TURN" : "ENDTURN"}
+                {isAutoMode ? "AUTO RUNNING" : isBotTurn ? "BOT TURN" : isRemotePlayerTurn ? "OPPONENT TURN" : "ENDTURN"}
               </button>
             </div>
           </div>
@@ -586,7 +642,7 @@ export default function GameplayPage({ onPlayAgain }: Props) {
                   currentPlayer={game.currentPlayer}
                   playerCharacters={playerCharacters}
                   onHexClick={(row, col, x, y) => {
-                    if (isGameOver || isBotTurn) return
+                    if (isGameOver || !isInteractiveTurn) return
                     if (
                       phase === "FREE_SPAWN" &&
                       !game.spawnableHexes.some(
@@ -750,3 +806,8 @@ export default function GameplayPage({ onPlayAgain }: Props) {
     </div>
   )
 }
+
+
+
+
+
