@@ -32,12 +32,9 @@ interface ConfiguredMinion extends MinionData {
 }
 
 const waitingPhases: RoomSetupPhase[] = [
-  "P1_MINION_TYPE_COUNT",
-  "P2_MINION_TYPE_COUNT",
-  "P1_CHARACTER_SELECT",
-  "P2_CHARACTER_SELECT",
-  "P1_MINION_SETUP",
-  "P2_MINION_SETUP",
+  "MINION_TYPE_COUNT",
+  "CHARACTER_SELECT",
+  "MINION_SETUP",
 ]
 
 function App() {
@@ -87,18 +84,9 @@ function App() {
   const currentMinions = minionsByPlayer[activeSetupPlayer]
   const effectiveRoomMinionTypeCount = wsRoomState?.effectiveMinionTypeCount ?? minionTypeCount
   const roomPhase = wsRoomState?.setupPhase
-  const isRoomMinionCountTurn =
-    !!wsRoomId &&
-    ((roomPhase === "P1_MINION_TYPE_COUNT" && wsPlayerId === 1) ||
-      (roomPhase === "P2_MINION_TYPE_COUNT" && wsPlayerId === 2))
-  const isRoomCharacterTurn =
-    !!wsRoomId &&
-    ((roomPhase === "P1_CHARACTER_SELECT" && wsPlayerId === 1) ||
-      (roomPhase === "P2_CHARACTER_SELECT" && wsPlayerId === 2))
-  const isRoomMinionSetupTurn =
-    !!wsRoomId &&
-    ((roomPhase === "P1_MINION_SETUP" && wsPlayerId === 1) ||
-      (roomPhase === "P2_MINION_SETUP" && wsPlayerId === 2))
+  const isRoomMinionCountTurn = !!wsRoomId && roomPhase === "MINION_TYPE_COUNT"
+  const isRoomCharacterTurn = !!wsRoomId && roomPhase === "CHARACTER_SELECT"
+  const isRoomMinionSetupTurn = !!wsRoomId && roomPhase === "MINION_SETUP"
 
   useEffect(() => {
     const bgm = new Audio(gameStartBgm)
@@ -185,48 +173,21 @@ function App() {
       case "LOBBY":
         setPage("lobby")
         break
-      case "P1_MINION_TYPE_COUNT":
-      case "P2_MINION_TYPE_COUNT":
+      case "MINION_TYPE_COUNT":
         setPage("minionType")
-        setRoomStatusText(
-          wsRoomState.setupPhase === "P1_MINION_TYPE_COUNT"
-            ? wsPlayerId === 1
-              ? "Your turn: choose minion type count"
-              : "Waiting for Player 1 to choose minion type count"
-            : wsPlayerId === 2
-              ? "Your turn: choose minion type count"
-              : "Waiting for Player 2 to choose minion type count"
-        )
+        setRoomStatusText("Both players can choose minion type count now")
         break
-      case "P1_CHARACTER_SELECT":
-      case "P2_CHARACTER_SELECT":
+      case "CHARACTER_SELECT":
         setPage("selectUI")
-        setRoomStatusText(
-          wsRoomState.setupPhase === "P1_CHARACTER_SELECT"
-            ? wsPlayerId === 1
-              ? "Your turn: choose character"
-              : "Waiting for Player 1 to choose character"
-            : wsPlayerId === 2
-              ? "Your turn: choose character"
-              : "Waiting for Player 2 to choose character"
-        )
+        setRoomStatusText("Both players can choose character now")
         break
-      case "P1_MINION_SETUP":
-      case "P2_MINION_SETUP": {
+      case "MINION_SETUP": {
         const localCharacter = wsPlayerId === 1 ? wsRoomState.player1Character : wsRoomState.player2Character
         setCurrentFaction(localCharacter ?? null)
         if (page !== "strategy") {
           setPage(localCharacter === "DEMON" ? "minionSetupDemon" : "minionSetupHuman")
         }
-        setRoomStatusText(
-          wsRoomState.setupPhase === "P1_MINION_SETUP"
-            ? wsPlayerId === 1
-              ? "Your turn: configure minions and strategies"
-              : "Waiting for Player 1 to finish minion setup"
-            : wsPlayerId === 2
-              ? "Your turn: configure minions and strategies"
-              : "Waiting for Player 2 to finish minion setup"
-        )
+        setRoomStatusText("Both players can configure minions and strategies now")
         break
       }
       case "PRE_BATTLE":
@@ -588,6 +549,8 @@ function App() {
       {page === "preBattle" && (
         <PreBattlePage
           onBack={handleBack}
+          wsRoomState={wsRoomState}
+          isRoomMode={!!wsRoomId}
           onConfirm={() => {
             if (wsRoomId) {
               stompWs.connect(() => {
