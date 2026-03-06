@@ -101,22 +101,22 @@ export default function PreBattlePage({ onBack, onConfirm, wsRoomState, isRoomMo
       className="min-h-screen"
     >
       <div className="w-full min-h-screen flex flex-col">
-        <div className="flex flex-col items-center pt-6 px-4 pb-28 flex-1 overflow-y-auto">
+        <div className="flex flex-col items-center pt-6 px-4 pb-10 md:pb-12 flex-1 overflow-y-auto">
           <img src={logo} alt="logo" className="w-[120px] md:w-[160px]" draggable={false} />
 
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-widest bg-[radial-gradient(circle,#FFFFFF_0%,#FFB300_60%,#FFB300_100%)] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,179,0,0.6)] mt-4 mb-8">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-widest bg-[radial-gradient(circle,#FFFFFF_0%,#FFB300_60%,#FFB300_100%)] bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(255,179,0,0.6)] mt-4 mb-6">
             PRE-BATTLE
           </h1>
 
-          <div className="w-full max-w-[1100px]">
+          <div className="w-full max-w-[980px] mb-6 md:mb-8 scale-[0.94] md:scale-100 origin-top">
             <ConfigBoard>
-              <div className="text-base md:text-lg font-medium space-y-10">
+              <div className="text-base md:text-lg font-medium space-y-8">
                 <div className="text-center">
                   <h2 className="text-white text-xl font-semibold mb-2">Game Mode</h2>
                   <p className="text-yellow-400">Mode: {mode}</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-10">
+                <div className="grid md:grid-cols-2 gap-8">
                   <div>
                     <h2 className="text-white text-xl font-semibold mb-4 text-center">
                       PLAYER 1 ({player1?.character ?? "-"})
@@ -158,7 +158,7 @@ export default function PreBattlePage({ onBack, onConfirm, wsRoomState, isRoomMo
 
                 <div>
                   <h2 className="text-white text-xl font-semibold mb-6 text-center">Economy Rules</h2>
-                  <div className="max-w-[800px] mx-auto grid grid-cols-2 gap-x-32 text-xl">
+                  <div className="max-w-[760px] mx-auto grid grid-cols-2 gap-x-20 text-lg md:text-xl">
                     <div className="space-y-3">
                       <p className="text-white">Initial Budget: <span className="text-yellow-400 font-mono">{config.initBudget}</span></p>
                       <p className="text-white">Turn Budget: <span className="text-yellow-400 font-mono">{config.turnBudget}</span></p>
@@ -178,7 +178,7 @@ export default function PreBattlePage({ onBack, onConfirm, wsRoomState, isRoomMo
           </div>
         </div>
 
-        <div className="fixed bottom-10 left-0 right-0 z-20 py-6 flex justify-center gap-10 backdrop-blur-md">
+        <div className="sticky bottom-0 z-20 w-full shrink-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent px-4 pb-4pt md:pb-16 flex justify-center gap-6 md:gap-10 backdrop-blur-sm">
           <BackButton onClick={onBack} />
           <ConfirmButton onClick={handleConfirm} />
         </div>

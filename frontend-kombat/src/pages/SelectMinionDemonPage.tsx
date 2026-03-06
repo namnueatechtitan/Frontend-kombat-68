@@ -10,7 +10,6 @@ import tankImg from "../assets/images/minions/Demon/tankdemon.png"
 import dpsImg from "../assets/images/minions/Demon/dpsdemon.png"
 import assassinImg from "../assets/images/minions/Demon/assassindemon.png"
 import supportImg from "../assets/images/minions/Demon/supportdemon.png"
-import finalOverlayImg from "../assets/images/finalOverlayBoard.png"
 import { demonMinions } from "../data/demonMinions"
 import fighterPreview from "../assets/images/minions/Demon/demon_fighter_preview.png"
 import tankPreview from "../assets/images/minions/Demon/demon_tank_preview.png"
@@ -78,6 +77,10 @@ export default function SelectMinionDemonPage({
     TANK: tankPreview,
     SUPPORT: supportPreview,
   }
+
+  const configuredNames = minions.map((minion) =>
+    (minion.name ?? "").trim() || minion.type
+  )
 
   function handleConfirmClick() {
     if (!selectedMinion) return
@@ -274,31 +277,76 @@ export default function SelectMinionDemonPage({
       </div>
 
       {isFinalConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-          <div className="relative z-10">
-            <img
-              src={finalOverlayImg}
-              alt="overlay"
-              className="w-[900px] max-w-[95%]"
-              draggable={false}
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="relative w-full max-w-[620px]">
+            <div
+              className="pointer-events-none absolute -inset-8 rounded-[40px] blur-3xl opacity-90"
+              style={{
+                background:
+                  "radial-gradient(circle at center, rgba(168,85,247,0.45), rgba(0,0,0,0))",
+              }}
             />
 
-            <div className="absolute bottom-[80px] w-full flex justify-center gap-20">
-              <button
-                onClick={() => setIsFinalConfirmOpen(false)}
-                className="px-14 py-3 rounded-full bg-blue-500 text-white"
-              >
-                Edit
-              </button>
+            <div className="relative overflow-hidden rounded-3xl border border-violet-300/45 bg-[linear-gradient(180deg,rgba(28,7,34,0.96),rgba(18,4,24,0.98))] shadow-[0_0_65px_rgba(168,85,247,0.3)]">
+              <div className="pointer-events-none absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_15%_20%,rgba(244,208,255,0.24),transparent_38%),radial-gradient(circle_at_80%_75%,rgba(194,132,252,0.2),transparent_40%)]" />
 
-              <button
-                onClick={onNext}
-                className="px-14 py-3 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 text-white"
-              >
-                Confirm
-              </button>
+              <div className="relative px-6 py-5 border-b border-violet-300/25 bg-black/25">
+                <div className="absolute top-2 left-4 text-violet-200/65 text-xs tracking-[0.22em]">
+                  FINAL CONFIRMATION
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-black tracking-[0.12em] text-center text-[#F4E7FF] drop-shadow-[0_0_16px_rgba(208,160,255,0.45)]">
+                  DEMON LEGION READY
+                </h2>
+                <div className="mx-auto mt-3 h-[3px] w-48 rounded-full bg-gradient-to-r from-fuchsia-500 via-purple-400 to-violet-300 shadow-[0_0_18px_rgba(180,110,255,0.5)]" />
+              </div>
+
+              <div className="relative px-6 py-8 text-center">
+                <p className="text-sm tracking-[0.22em] text-violet-200/75">MINION SETUP COMPLETE</p>
+                <p className="mt-2 text-4xl sm:text-5xl font-black tracking-[0.05em] text-white drop-shadow-[0_0_24px_rgba(180,120,255,0.4)]">
+                  {createdCount}/{minionTypeCount}
+                </p>
+                <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-violet-300/45 bg-violet-500/15 px-4 py-1 text-xs tracking-[0.16em] text-violet-100">
+                  <span className="inline-block h-2 w-2 rounded-full bg-current animate-pulse" />
+                  READY FOR PRE-BATTLE
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-left">
+                  <p className="text-xs tracking-[0.22em] text-violet-200/65">SELECTED MINIONS</p>
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {configuredNames.map((name) => (
+                      <span
+                        key={name}
+                        className="rounded-full border border-violet-300/30 bg-violet-500/10 px-3 py-1 text-sm font-semibold tracking-wide text-violet-100"
+                      >
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative px-6 pb-7 pt-1 flex flex-col sm:flex-row gap-3 sm:justify-center">
+                <button
+                  type="button"
+                  onClick={() => setIsFinalConfirmOpen(false)}
+                  className="w-full sm:w-[220px] h-[55px] rounded-full text-white font-semibold text-lg transition-all duration-300 bg-gradient-to-r from-blue-500 to-blue-400 hover:from-blue-600 hover:to-blue-500 hover:scale-105 shadow-md hover:shadow-xl"
+                >
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="w-full sm:w-[220px] h-[55px] rounded-full text-white font-semibold text-lg transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-500 hover:scale-105 shadow-md hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]"
+                >
+                  Confirm
+                </button>
+              </div>
+
+              <div className="pointer-events-none absolute left-4 top-4 h-6 w-6 border-l-2 border-t-2 border-violet-200/45 rounded-tl-md" />
+              <div className="pointer-events-none absolute right-4 top-4 h-6 w-6 border-r-2 border-t-2 border-violet-200/45 rounded-tr-md" />
+              <div className="pointer-events-none absolute left-4 bottom-4 h-6 w-6 border-l-2 border-b-2 border-violet-200/45 rounded-bl-md" />
+              <div className="pointer-events-none absolute right-4 bottom-4 h-6 w-6 border-r-2 border-b-2 border-violet-200/45 rounded-br-md" />
             </div>
           </div>
         </div>
