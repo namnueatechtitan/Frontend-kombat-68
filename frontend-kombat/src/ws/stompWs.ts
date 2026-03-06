@@ -13,7 +13,7 @@ const resolveWsUrl = () => {
 class SimpleStompWs {
   private socket: WebSocket | null = null
   private connected = false
-  private subscriptions = new Map<string, MessageHandler>()
+  private subscriptions = new Map<string, Set<MessageHandler>>()
   private subscribedDestinations = new Set<string>()
   private subSeq = 0
   private readonly wsUrl = resolveWsUrl()
@@ -71,13 +71,15 @@ class SimpleStompWs {
         if (parsed.command === "MESSAGE") {
           const destination = parsed.headers.destination
           if (!destination) continue
-          const handler = this.subscriptions.get(destination)
-          if (!handler) continue
-          try {
-            const payload = parsed.body ? JSON.parse(parsed.body) : null
-            handler(payload)
-          } catch {
-            handler(parsed.body)
+          const handlers = this.subscriptions.get(destination)
+          if (!handlers || handlers.size === 0) continue
+          for (const handler of handlers) {
+            try {
+              const payload = parsed.body ? JSON.parse(parsed.body) : null
+              handler(payload)
+            } catch {
+              handler(parsed.body)
+            }
           }
         }
       }
@@ -91,14 +93,30 @@ class SimpleStompWs {
   }
 
   subscribe(destination: string, handler: MessageHandler) {
-    this.subscriptions.set(destination, handler)
+    const handlers = this.subscriptions.get(destination) ?? new Set<MessageHandler>()
+    handlers.add(handler)
+    this.subscriptions.set(destination, handlers)
     if (!this.connected) return
     this.subscribeFrame(destination)
   }
 
-  unsubscribe(destination: string) {
-    this.subscriptions.delete(destination)
-    this.subscribedDestinations.delete(destination)
+  unsubscribe(destination: string, handler?: MessageHandler) {
+    if (!handler) {
+      this.subscriptions.delete(destination)
+      this.subscribedDestinations.delete(destination)
+      return
+    }
+
+    const handlers = this.subscriptions.get(destination)
+    if (!handlers) {
+      return
+    }
+
+    handlers.delete(handler)
+    if (handlers.size === 0) {
+      this.subscriptions.delete(destination)
+      this.subscribedDestinations.delete(destination)
+    }
   }
 
   send(destination: string, body: unknown) {

@@ -2,19 +2,46 @@ import { useMemo, useState } from "react"
 import { stompWs } from "../ws/stompWs"
 
 type ModeType = "DUEL" | "SOLITAIRE" | "AUTO"
+type Character = "HUMAN" | "DEMON"
+type RoomSetupPhase =
+  | "LOBBY"
+  | "P1_MINION_TYPE_COUNT"
+  | "P2_MINION_TYPE_COUNT"
+  | "P1_CHARACTER_SELECT"
+  | "P2_CHARACTER_SELECT"
+  | "P1_MINION_SETUP"
+  | "P2_MINION_SETUP"
+  | "PRE_BATTLE"
+  | "PLAYING"
+  | "FINISHED"
 
-interface RoomState {
+export interface RoomConfiguredMinion {
+  type: string
+  name: string
+  defenseFactor: number
+  strategy: string
+}
+
+export interface RoomState {
   roomId: string
   mode: ModeType
   host: string
   players: string[]
   started: boolean
   error?: string
+  setupPhase?: RoomSetupPhase
+  player1MinionTypeCount?: number
+  player2MinionTypeCount?: number
+  effectiveMinionTypeCount?: number
+  player1Character?: Character
+  player2Character?: Character
+  player1ConfiguredMinions?: RoomConfiguredMinion[]
+  player2ConfiguredMinions?: RoomConfiguredMinion[]
 }
 
 interface Props {
   onBack: () => void
-  onGameStarted: (roomId: string, playerName: string, localPlayerId: number | null) => void
+  onRoomConnected: (roomId: string, mode: ModeType, playerName: string, localPlayerId: number | null) => void
 }
 
 const randomRoomId = () => Math.random().toString(36).slice(2, 8).toUpperCase()
@@ -30,7 +57,7 @@ const resolvePlayerId = (room: RoomState | null, playerName: string): number | n
   return null
 }
 
-export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
+export default function GameLobbyPage({ onBack, onRoomConnected }: Props) {
   const [playerName] = useState(() => `Player-${Math.floor(Math.random() * 1000)}`)
   const [mode, setMode] = useState<ModeType>("DUEL")
   const [roomCode, setRoomCode] = useState("")
@@ -38,6 +65,9 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
   const [connected, setConnected] = useState(false)
 
   const isHost = !!roomState && roomState.host === playerName
+  const humanPlayers = (roomState?.players ?? []).filter(
+    (name) => !["BOT", "BOT_A", "BOT_B"].includes(name.toUpperCase())
+  )
 
   const ensureConnected = (onReady: () => void) => {
     if (stompWs.isConnected()) {
@@ -57,11 +87,12 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
       if (!payload) return
       const nextRoomState = payload as RoomState
       setRoomState(nextRoomState)
-      if (nextRoomState.started) {
-        stompWs.subscribe(`/topic/game/${roomId}`, () => {
-        })
-        onGameStarted(roomId, playerName, resolvePlayerId(nextRoomState, playerName))
-      }
+      onRoomConnected(
+        nextRoomState.roomId,
+        nextRoomState.mode,
+        playerName,
+        resolvePlayerId(nextRoomState, playerName),
+      )
     })
   }
 
@@ -92,15 +123,6 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
     })
   }
 
-  const handleStartGame = () => {
-    if (!roomState) return
-
-    ensureConnected(() => {
-      stompWs.subscribe(`/topic/game/${roomState.roomId}`, () => {})
-      stompWs.send("/app/start-game", { roomId: roomState.roomId })
-    })
-  }
-
   const modeLabel = useMemo(
     () =>
       ({
@@ -110,6 +132,8 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
       })[mode],
     [mode],
   )
+
+  const phaseLabel = roomState?.setupPhase ?? "LOBBY"
 
   return (
     <div className="min-h-screen bg-[#0d0d10] text-[#fcebc6] flex items-center justify-center p-6">
@@ -121,16 +145,17 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
           </button>
         </div>
 
-        <p className="mt-2 text-sm text-white/70">Game Lobby · {modeLabel} · {connected ? "Connected" : "Connecting..."}</p>
+        <p className="mt-2 text-sm text-white/70">Game Lobby ? {roomState?.mode ? `${roomState.mode} Mode` : modeLabel} ? {connected ? "Connected" : "Connecting..."}</p>
         <div className="mt-3 text-xs text-white/60">You are: {playerName}</div>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-xl border border-white/10 bg-black/35 p-4 space-y-3">
             <label className="block text-sm text-white/70">Mode</label>
             <select
-              value={mode}
+              value={roomState?.mode ?? mode}
               onChange={(e) => setMode(e.target.value as ModeType)}
-              className="w-full bg-black/60 border border-white/20 rounded-lg px-3 py-2"
+              disabled={!!roomState}
+              className="w-full bg-black/60 border border-white/20 rounded-lg px-3 py-2 disabled:opacity-60"
             >
               <option value="DUEL">Duel</option>
               <option value="SOLITAIRE">Solitaire</option>
@@ -180,13 +205,19 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
           {roomState?.error && (
             <div className="mt-3 text-red-300 text-sm">{roomState.error}</div>
           )}
-          {isHost && (
-            <button
-              onClick={handleStartGame}
-              className="mt-4 py-2 px-5 rounded-lg bg-gradient-to-r from-red-600 to-amber-500 font-bold"
-            >
-              Start Game
-            </button>
+          {!!roomState && !roomState.started && (
+            <div className="mt-4 text-sm text-white/70 space-y-1">
+              <div>Phase: {phaseLabel}</div>
+              <div>
+                {roomState.mode === "DUEL"
+                  ? humanPlayers.length >= 2
+                    ? "Room ready. Setup flow is driven by backend phase now."
+                    : isHost
+                      ? "Waiting for Player 2 to join."
+                      : "Joined room. Waiting for room sync."
+                  : "Room ready."}
+              </div>
+            </div>
           )}
         </div>
       </div>
