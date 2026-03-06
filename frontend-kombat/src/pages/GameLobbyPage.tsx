@@ -39,13 +39,16 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
 
   const isHost = !!roomState && roomState.host === playerName
 
-  const ensureConnected = () => {
+  const ensureConnected = (onReady: () => void) => {
     if (stompWs.isConnected()) {
       setConnected(true)
+      onReady()
       return
     }
+
     stompWs.connect(() => {
       setConnected(true)
+      onReady()
     })
   }
 
@@ -63,32 +66,39 @@ export default function GameLobbyPage({ onBack, onGameStarted }: Props) {
   }
 
   const handleCreateRoom = () => {
-    ensureConnected()
     const roomId = randomRoomId()
-    subscribeRoom(roomId)
-    stompWs.send("/app/create-room", {
-      roomId,
-      playerName,
-      mode,
+
+    ensureConnected(() => {
+      subscribeRoom(roomId)
+      stompWs.send("/app/create-room", {
+        roomId,
+        playerName,
+        mode,
+      })
+      setRoomCode(roomId)
     })
-    setRoomCode(roomId)
   }
 
   const handleJoinRoom = () => {
     if (!roomCode.trim()) return
-    ensureConnected()
     const roomId = roomCode.trim().toUpperCase()
-    subscribeRoom(roomId)
-    stompWs.send("/app/join-room", {
-      roomId,
-      playerName,
+
+    ensureConnected(() => {
+      subscribeRoom(roomId)
+      stompWs.send("/app/join-room", {
+        roomId,
+        playerName,
+      })
     })
   }
 
   const handleStartGame = () => {
     if (!roomState) return
-    stompWs.subscribe(`/topic/game/${roomState.roomId}`, () => {})
-    stompWs.send("/app/start-game", { roomId: roomState.roomId })
+
+    ensureConnected(() => {
+      stompWs.subscribe(`/topic/game/${roomState.roomId}`, () => {})
+      stompWs.send("/app/start-game", { roomId: roomState.roomId })
+    })
   }
 
   const modeLabel = useMemo(
