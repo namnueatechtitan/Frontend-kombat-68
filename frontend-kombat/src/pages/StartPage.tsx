@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import bg from "../assets/images/start.png"
+import bg from "../assets/images/Start.png"
 import logo from "../assets/images/logo.png"
 import GameButton from "../components/GameButton"
 import { getConfig } from "../api/gameApi"
