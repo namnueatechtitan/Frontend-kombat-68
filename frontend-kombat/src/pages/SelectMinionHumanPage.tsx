@@ -3,7 +3,6 @@ import ConfirmButton from "../components/ConfirmButton"
 import AnimatedBackground from "../components/AnimatedBackground"
 import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
-import boardSelectMinion from "../assets/images/boardselectminion.png"
 import BackButton from "../components/BackButton"
 import fighterImg from "../assets/images/minions/Human/fighterhuman.png"
 import tankImg from "../assets/images/minions/Human/tankhuman.png"
@@ -114,12 +113,18 @@ export default function SelectMinionHumanPage({
 
         <div className="flex justify-center mt-4">
           <div className="relative w-[80%] max-w-[1400px]">
-            <img
-              src={boardSelectMinion}
-              alt="board"
-              className="w-full h-auto select-none pointer-events-none"
-              draggable={false}
-            />
+            <div className="relative aspect-[13/7] w-full overflow-hidden rounded-[28px] border border-[#8f552f]/70 bg-[linear-gradient(180deg,rgba(31,8,10,0.96),rgba(17,7,11,0.97))] shadow-[0_0_0_1px_rgba(255,226,180,0.06)_inset,0_24px_54px_rgba(0,0,0,0.34)]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,184,92,0.14),transparent_26%),radial-gradient(circle_at_50%_100%,rgba(68,22,14,0.2),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_18%,transparent_82%,rgba(255,255,255,0.02))]" />
+              <div className="pointer-events-none absolute inset-[14px] rounded-[22px] border border-[#c78655]/55" />
+              <div className="pointer-events-none absolute inset-[24px] rounded-[18px] border border-[#5c2414]/75 shadow-[inset_0_0_28px_rgba(0,0,0,0.28)]" />
+              <div className="pointer-events-none absolute inset-x-[38px] top-[56px] h-px bg-gradient-to-r from-transparent via-[#ffd08a]/80 to-transparent shadow-[0_0_12px_rgba(255,180,90,0.35)]" />
+              <div className="pointer-events-none absolute inset-x-[38px] bottom-[275px] h-px bg-gradient-to-r from-transparent via-[#8a4f32]/60 to-transparent" />
+
+              <div className="pointer-events-none absolute left-4 top-4 h-9 w-9 rounded-tl-md border-l-2 border-t-2 border-[#8f552f]/85" />
+              <div className="pointer-events-none absolute right-4 top-4 h-9 w-9 rounded-tr-md border-r-2 border-t-2 border-[#8f552f]/85" />
+              <div className="pointer-events-none absolute left-4 bottom-4 h-9 w-9 rounded-bl-md border-l-2 border-b-2 border-[#8f552f]/85" />
+              <div className="pointer-events-none absolute right-4 bottom-4 h-9 w-9 rounded-br-md border-r-2 border-b-2 border-[#8f552f]/85" />
+            </div>
 
             <div className="absolute inset-0 flex flex-col">
               <div className="flex justify-between px-16 pt-8 text-white text-sm tracking-widest">

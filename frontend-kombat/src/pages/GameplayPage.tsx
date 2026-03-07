@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+ï»¿import { useEffect, useRef, useState } from "react"
 import GameBoard from "../components/GameBoard"
 import PlayerPanel from "../components/PlayerPanel"
 import ActionLog from "../components/ActionLog"
@@ -84,9 +84,11 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
   const [lastBoughtHexTurnKey, setLastBoughtHexTurnKey] = useState<string | null>(null)
+  const [lastSpawnTurnKey, setLastSpawnTurnKey] = useState<string | null>(null)
   const [shakingMinionIds, setShakingMinionIds] = useState<string[]>([])
   const [dyingMinions, setDyingMinions] = useState<DyingMinionEffect[]>([])
   const [isScreenShaking, setIsScreenShaking] = useState(false)
+  const autoEndTurnKeyRef = useRef<string | null>(null)
   const lastBackendLogSignatureRef = useRef("")
   const hpByRuntimeIdRef = useRef<Record<string, number>>({})
   const previousRuntimeMinionsRef = useRef<RuntimeMinion[]>([])
@@ -321,11 +323,18 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
           row: popup.row,
           col: popup.col,
         })
+        if (game.gameState.phase === "PLAYER_ACTION") {
+          setLastSpawnTurnKey(`${game.gameState.turnNumber}-${game.currentPlayer}`)
+        }
         setSelectingType(false)
         setPopup(null)
         return
       }
       await spawnMinion(type, popup.row, popup.col)
+
+      if (game.gameState.phase === "PLAYER_ACTION") {
+        setLastSpawnTurnKey(`${game.gameState.turnNumber}-${game.currentPlayer}`)
+      }
 
       appendTimelineLog(
         game.gameState.phase === "FREE_SPAWN"
@@ -354,6 +363,7 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
           row: popup.row,
           col: popup.col,
         })
+        setLastBoughtHexTurnKey(`${game.gameState.turnNumber}-${game.currentPlayer}`)
         setSelectingType(false)
         setPopup(null)
         return
@@ -364,6 +374,9 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
       appendTimelineLog(
         `Player ${game.currentPlayer} buy hex (${popup.row}, ${popup.col})`
       )
+
+      setSelectingType(false)
+      setPopup(null)
 
       await loadGame()
     } catch {
@@ -388,6 +401,38 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
       alert("End turn failed")
     }
   }
+
+  useEffect(() => {
+    if (!game || game.gameOver) {
+      return
+    }
+
+    const phase = game.gameState.phase
+    const currentTurnKey = `${game.gameState.turnNumber}-${game.currentPlayer}`
+    const hasBoughtHexThisTurn = lastBoughtHexTurnKey === currentTurnKey
+    const hasSpawnedThisTurn = lastSpawnTurnKey === currentTurnKey
+    const isSolitaire = setupSummary?.mode === "SOLITAIRE"
+    const isAutoMode = setupSummary?.mode === "AUTO"
+    const isBotTurn = isAutoMode || (isSolitaire && game.currentPlayer === 2)
+    const isRemotePlayerTurn = !!wsRoomId && localPlayerId != null && localPlayerId !== game.currentPlayer
+    const isInteractiveTurn = !isBotTurn && !isRemotePlayerTurn
+
+    if (
+      phase !== "PLAYER_ACTION" ||
+      !isInteractiveTurn ||
+      !hasBoughtHexThisTurn ||
+      !hasSpawnedThisTurn
+    ) {
+      return
+    }
+
+    if (autoEndTurnKeyRef.current === currentTurnKey) {
+      return
+    }
+
+    autoEndTurnKeyRef.current = currentTurnKey
+    void handleEndTurn()
+  }, [game, lastBoughtHexTurnKey, lastSpawnTurnKey, localPlayerId, setupSummary?.mode, wsRoomId])
 
   if (loading) {
     return (
@@ -531,6 +576,7 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   const selectableMinions = factionPool.filter((minion) =>
     availableTypeSet.has(minion.type.toUpperCase())
   )
+
   const winnerLabel =
     game.winner === "P1"
       ? "Player 1"
@@ -593,7 +639,7 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
               <div className="flex items-center gap-4 min-w-0">
                 <img src={logoImage} alt="Game logo" className="w-12 h-12 lg:w-14 lg:h-14 object-contain" />
                 <div className="text-sm sm:text-base lg:text-lg font-bold tracking-wide text-yellow-300">
-                  TURN {turnNumber} · PLAYER {game.currentPlayer}{wsRoomId && localPlayerId != null ? ` (YOU: P${localPlayerId}${localPlayerName ? ` ${localPlayerName}` : ""})` : ""}
+                  TURN {turnNumber} PLAYER {game.currentPlayer}{wsRoomId && localPlayerId != null ? ` (YOU: P${localPlayerId}${localPlayerName ? ` ${localPlayerName}` : ""})` : ""}
                 </div>
               </div>
 
@@ -743,7 +789,7 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
       )}
 
       {isGameOver && (
-        <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[120] bg-black/38 backdrop-blur-[2px] flex items-center justify-center p-4">
           <div className="relative w-full max-w-[620px]">
             <div
               className="pointer-events-none absolute -inset-8 rounded-[40px] blur-3xl opacity-90 animate-game-end-pulse"

@@ -1,10 +1,18 @@
+const DEFAULT_BACKEND_ORIGIN = "https://backend-kombat68.onrender.com"
+
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "")
+
 const resolveApiBaseUrl = () => {
   const configured = import.meta.env.VITE_API_BASE_URL?.trim()
   if (configured) {
-    return configured
+    return trimTrailingSlash(configured)
   }
 
-  return `${window.location.protocol}//${window.location.hostname}:8080/api/game`
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    return `${window.location.protocol}//${window.location.hostname}:8080/api/game`
+  }
+
+  return `${DEFAULT_BACKEND_ORIGIN}/api/game`
 }
 
 const BASE_URL = resolveApiBaseUrl()

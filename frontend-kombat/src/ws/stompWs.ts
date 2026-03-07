@@ -1,13 +1,19 @@
 type MessageHandler = (payload: any) => void
 
+const DEFAULT_WS_URL = "wss://backend-kombat68.onrender.com/ws"
+
 const resolveWsUrl = () => {
   const configured = import.meta.env.VITE_WS_URL?.trim()
   if (configured) {
     return configured
   }
 
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  return `${protocol}//${window.location.hostname}:8080/ws`
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
+    return `${protocol}//${window.location.hostname}:8080/ws`
+  }
+
+  return DEFAULT_WS_URL
 }
 
 class SimpleStompWs {

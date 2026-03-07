@@ -40,6 +40,39 @@ body {
   will-change: transform;
 }
 
+@keyframes menuSparkFloat {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.92);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate3d(12px, -110px, 0) scale(1.08);
+    opacity: 0;
+  }
+}
+
+.animate-menu-spark {
+  animation: menuSparkFloat 3.8s linear infinite;
+}
+
+@keyframes menuEnergyPulse {
+  0%, 100% {
+    opacity: 0.48;
+    transform: scaleX(0.98);
+  }
+  50% {
+    opacity: 0.88;
+    transform: scaleX(1.02);
+  }
+}
+
+.animate-menu-energy {
+  animation: menuEnergyPulse 2.4s ease-in-out infinite;
+}
+
 /* ============================= */
 /* Epic Copper-Gold Scrollbar */
 /* ============================= */
