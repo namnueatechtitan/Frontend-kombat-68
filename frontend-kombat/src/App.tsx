@@ -408,7 +408,7 @@ function App() {
           onConfirm={async (count) => {
             if (wsRoomId) {
               if (!isRoomMinionCountTurn) {
-                alert("Not your turn to choose minion type count")
+                alert("Minion type selection is not available yet")
                 return
               }
               setMinionTypeCount(count)
@@ -437,7 +437,7 @@ function App() {
             try {
               if (wsRoomId) {
                 if (!isRoomCharacterTurn) {
-                  alert("Not your turn to choose character")
+                  alert("Character selection is not available yet")
                   return
                 }
                 setCurrentFaction(uiType)
@@ -473,7 +473,7 @@ function App() {
           onBack={handleBack}
           onSelect={(minion) => {
             if (wsRoomId && !isRoomMinionSetupTurn) {
-              alert("Waiting for your minion setup turn")
+              alert("Minion setup is not available yet")
               return
             }
             setSelectedMinion({
@@ -495,7 +495,7 @@ function App() {
           onBack={handleBack}
           onSelect={(minion) => {
             if (wsRoomId && !isRoomMinionSetupTurn) {
-              alert("Waiting for your minion setup turn")
+              alert("Minion setup is not available yet")
               return
             }
             setSelectedMinion({
