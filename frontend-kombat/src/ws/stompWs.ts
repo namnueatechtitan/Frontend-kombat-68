@@ -24,6 +24,8 @@ class SimpleStompWs {
   private subSeq = 0
   private readonly wsUrl = resolveWsUrl()
   private pendingConnectedCallbacks: Array<() => void> = []
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private reconnectDelayMs = 1500
 
   connect(onConnected?: () => void) {
     if (this.connected) {
@@ -37,6 +39,11 @@ class SimpleStompWs {
 
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
       return
+    }
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
     }
 
     this.socket = new WebSocket(this.wsUrl)
@@ -64,6 +71,7 @@ class SimpleStompWs {
         if (!parsed) continue
         if (parsed.command === "CONNECTED") {
           this.connected = true
+          this.reconnectDelayMs = 1500
           for (const destination of this.subscriptions.keys()) {
             this.subscribeFrame(destination)
           }
@@ -91,10 +99,24 @@ class SimpleStompWs {
       }
     }
 
+    this.socket.onerror = () => {
+      this.socket?.close()
+    }
+
     this.socket.onclose = () => {
       this.connected = false
+      this.socket = null
       this.subscribedDestinations.clear()
-      this.pendingConnectedCallbacks = []
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer)
+      }
+      if (this.subscriptions.size > 0 || this.pendingConnectedCallbacks.length > 0) {
+        this.reconnectTimer = setTimeout(() => {
+          this.reconnectTimer = null
+          this.connect()
+        }, this.reconnectDelayMs)
+        this.reconnectDelayMs = Math.min(this.reconnectDelayMs * 2, 8000)
+      }
     }
   }
 

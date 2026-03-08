@@ -4,7 +4,7 @@ import GameWrapper from "./components/GameWrapper"
 import ArrowButton from "./components/ArrowButton"
 
 import StartPage from "./pages/StartPage"
-import ConfigPage from "./pages/ConfigPage"
+import ConfigPage, { type GameConfig } from "./pages/ConfigPage"
 import ModePage from "./pages/ModePage"
 import MinionTypePage from "./pages/MinionTypePage"
 import SelectCharacterPage from "./pages/SelectCharacterPage"
@@ -16,7 +16,7 @@ import GameplayPage from "./pages/GameplayPage"
 import SelectMinionHumanPage from "./pages/SelectMinionHumanPage"
 import SelectMinionDemonPage from "./pages/SelectMinionDemonPage"
 import PreBattlePage from "./pages/PreBattleSummaryPage"
-import { resetGame, setCharacter, setMode, setupFull } from "./api/gameApi"
+import { getConfig, resetGame, setCharacter, setMode, setupFull } from "./api/gameApi"
 import { stompWs } from "./ws/stompWs"
 import gameStartBgm from "./Soubd_Audio/Game start.mp3"
 import { demonMinions } from "./data/demonMinions"
@@ -24,7 +24,21 @@ import { humanMinions } from "./data/humanMinions"
 
 import type { MinionData, MinionType } from "./types/MinionData"
 
+const APP_SESSION_STORAGE_KEY = "kombat:app-session"
+
 type RoomSetupPhase = NonNullable<LobbyRoomState["setupPhase"]>
+type AppPage =
+  | "start"
+  | "config"
+  | "mode"
+  | "lobby"
+  | "minionType"
+  | "selectUI"
+  | "minionSetupHuman"
+  | "minionSetupDemon"
+  | "strategy"
+  | "preBattle"
+  | "game"
 
 interface ConfiguredMinion extends MinionData {
   strategy: string
@@ -37,6 +51,8 @@ const waitingPhases: RoomSetupPhase[] = [
   "MINION_SETUP",
 ]
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 function App() {
   const demonNameByType = new Map(
     demonMinions.map((minion) => [minion.type, minion.name])
@@ -45,19 +61,8 @@ function App() {
     humanMinions.map((minion) => [minion.type, minion.name])
   )
 
-  const [page, setPage] = useState<
-    | "start"
-    | "config"
-    | "mode"
-    | "lobby"
-    | "minionType"
-    | "selectUI"
-    | "minionSetupHuman"
-    | "minionSetupDemon"
-    | "strategy"
-    | "preBattle"
-    | "game"
-  >("start")
+  const [page, setPage] = useState<AppPage>("start")
+  const [configReturnPage, setConfigReturnPage] = useState<AppPage>("lobby")
 
   const [setupPlayer, setSetupPlayer] = useState<1 | 2>(1)
   const [currentFaction, setCurrentFaction] =
@@ -78,7 +83,53 @@ function App() {
       1: [],
       2: []
     })
+  const [backendWakeState, setBackendWakeState] = useState<"idle" | "waking" | "ready" | "failed">("idle")
   const bgmRef = useRef<HTMLAudioElement | null>(null)
+  const hasRestoredSessionRef = useRef(false)
+
+  const clearAppSessionState = () => {
+    setPage("start")
+    setSetupPlayer(1)
+    setCurrentFaction(null)
+    setSelectedMinion(null)
+    setMinionTypeCount(0)
+    setSelectedMode(null)
+    setWsRoomId(null)
+    setWsPlayerName(null)
+    setWsPlayerId(null)
+    setWsRoomState(null)
+    setRoomStatusText(null)
+    setMinionsByPlayer({ 1: [], 2: [] })
+    window.localStorage.removeItem(APP_SESSION_STORAGE_KEY)
+  }
+
+  const wakeBackendAfterReload = async () => {
+    setBackendWakeState("waking")
+
+    try {
+      await resetGame()
+    } catch (error) {
+      console.error("Reset game on reload failed:", error)
+    }
+
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      try {
+        await getConfig()
+        setBackendWakeState("ready")
+        window.setTimeout(() => {
+          setBackendWakeState((current) => (current === "ready" ? "idle" : current))
+        }, 1800)
+        return
+      } catch (error) {
+        if (attempt === 7) {
+          console.error("Backend wake retry failed:", error)
+          setBackendWakeState("failed")
+          return
+        }
+        await delay(1500)
+      }
+    }
+  }
 
   const activeSetupPlayer = (wsRoomId && wsPlayerId ? wsPlayerId : setupPlayer) as 1 | 2
   const currentMinions = minionsByPlayer[activeSetupPlayer]
@@ -87,6 +138,112 @@ function App() {
   const isRoomMinionCountTurn = !!wsRoomId && roomPhase === "MINION_TYPE_COUNT"
   const isRoomCharacterTurn = !!wsRoomId && roomPhase === "CHARACTER_SELECT"
   const isRoomMinionSetupTurn = !!wsRoomId && roomPhase === "MINION_SETUP"
+  const roomConfig = wsRoomState?.config as GameConfig | undefined
+
+  const openRoomConfig = (returnPage: AppPage = page) => {
+    setConfigReturnPage(returnPage)
+    setPage("config")
+  }
+
+  useEffect(() => {
+    if (hasRestoredSessionRef.current) {
+      return
+    }
+
+    hasRestoredSessionRef.current = true
+
+    try {
+      const raw = window.localStorage.getItem(APP_SESSION_STORAGE_KEY)
+      if (!raw) {
+        return
+      }
+
+      const saved = JSON.parse(raw) as {
+        page?: AppPage
+        setupPlayer?: 1 | 2
+        currentFaction?: "HUMAN" | "DEMON" | null
+        selectedMinion?: ConfiguredMinion | null
+        minionTypeCount?: number
+        selectedMode?: "DUEL" | "SOLITAIRE" | "AUTO" | null
+        wsRoomId?: string | null
+        wsPlayerName?: string | null
+        wsPlayerId?: number | null
+        roomStatusText?: string | null
+        minionsByPlayer?: Record<1 | 2, ConfiguredMinion[]>
+      }
+
+      if (saved.page) {
+        const normalizedPage =
+          saved.page === "strategy"
+            ? (saved.currentFaction === "DEMON" ? "minionSetupDemon" : "minionSetupHuman")
+            : saved.page
+        setPage(normalizedPage)
+      }
+      if (saved.setupPlayer) setSetupPlayer(saved.setupPlayer)
+      if (saved.currentFaction !== undefined) setCurrentFaction(saved.currentFaction)
+      if (saved.selectedMinion !== undefined) setSelectedMinion(saved.selectedMinion)
+      if (typeof saved.minionTypeCount === "number") setMinionTypeCount(saved.minionTypeCount)
+      if (saved.selectedMode !== undefined) setSelectedMode(saved.selectedMode)
+      if (saved.wsRoomId !== undefined) setWsRoomId(saved.wsRoomId)
+      if (saved.wsPlayerName !== undefined) setWsPlayerName(saved.wsPlayerName)
+      if (saved.wsPlayerId !== undefined) setWsPlayerId(saved.wsPlayerId)
+      if (saved.roomStatusText !== undefined) setRoomStatusText(saved.roomStatusText)
+      if (saved.minionsByPlayer) setMinionsByPlayer(saved.minionsByPlayer)
+    } catch (error) {
+      console.error("Failed to restore app session", error)
+      window.localStorage.removeItem(APP_SESSION_STORAGE_KEY)
+    }
+  }, [])
+
+  useEffect(() => {
+    const navigationEntry = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined
+    if (navigationEntry?.type !== "reload") {
+      return
+    }
+
+    clearAppSessionState()
+    void wakeBackendAfterReload()
+  }, [])
+
+  useEffect(() => {
+    if (!hasRestoredSessionRef.current) {
+      return
+    }
+
+    const nextPage: AppPage =
+      page === "strategy"
+        ? (currentFaction === "DEMON" ? "minionSetupDemon" : "minionSetupHuman")
+        : page
+
+    window.localStorage.setItem(
+      APP_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        page: nextPage,
+        setupPlayer,
+        currentFaction,
+        selectedMinion,
+        minionTypeCount,
+        selectedMode,
+        wsRoomId,
+        wsPlayerName,
+        wsPlayerId,
+        roomStatusText,
+        minionsByPlayer,
+      }),
+    )
+  }, [
+    currentFaction,
+    minionTypeCount,
+    minionsByPlayer,
+    page,
+    roomStatusText,
+    selectedMinion,
+    selectedMode,
+    setupPlayer,
+    wsPlayerId,
+    wsPlayerName,
+    wsRoomId,
+  ])
 
   useEffect(() => {
     const bgm = new Audio(gameStartBgm)
@@ -148,6 +305,10 @@ function App() {
 
   useEffect(() => {
     if (!wsRoomState) {
+      return
+    }
+
+    if (page === "config") {
       return
     }
 
@@ -286,6 +447,8 @@ function App() {
   const handleBack = () => {
     switch (page) {
       case "config":
+        setPage(wsRoomId ? configReturnPage : "start")
+        break
       case "mode":
         setPage("start")
         break
@@ -323,18 +486,7 @@ function App() {
   }
 
   const handlePlayAgain = () => {
-    setSetupPlayer(1)
-    setCurrentFaction(null)
-    setSelectedMinion(null)
-    setSelectedMode(null)
-    setWsRoomId(null)
-    setWsPlayerName(null)
-    setWsPlayerId(null)
-    setWsRoomState(null)
-    setRoomStatusText(null)
-    setMinionTypeCount(0)
-    setMinionsByPlayer({ 1: [], 2: [] })
-    setPage("start")
+    clearAppSessionState()
 
     void resetGame().catch((error) => {
       console.error("Reset game failed:", error)
@@ -370,6 +522,7 @@ function App() {
 
       {page === "start" && (
         <StartPage
+          backendWakeState={backendWakeState}
           onConfig={() => setPage("config")}
           onStart={() => setPage("mode")}
           onLobby={() => setPage("lobby")}
@@ -379,6 +532,11 @@ function App() {
       {page === "lobby" && (
         <GameLobbyPage
           onBack={handleBack}
+          onConfig={() => openRoomConfig("lobby")}
+          initialRoomId={wsRoomId}
+          initialMode={selectedMode === "SOLITAIRE" ? null : selectedMode}
+          initialPlayerName={wsPlayerName}
+          initialRoomState={wsRoomState}
           onRoomConnected={(roomId, mode, playerName, playerId) => {
             setWsRoomId(roomId)
             setWsPlayerName(playerName)
@@ -391,7 +549,24 @@ function App() {
       {page === "config" && (
         <ConfigPage
           onBack={handleBack}
-          onConfirm={() => setPage("mode")}
+          mode={wsRoomId ? "room" : "global"}
+          initialConfig={wsRoomId ? roomConfig ?? null : null}
+          onConfirm={async (config) => {
+            if (wsRoomId) {
+              if (wsPlayerId !== 1) {
+                throw new Error("Only host can update room config")
+              }
+              stompWs.connect(() => {
+                stompWs.send("/app/update-room-config", {
+                  roomId: wsRoomId,
+                  config,
+                })
+              })
+              setPage(configReturnPage)
+              return
+            }
+            setPage("mode")
+          }}
         />
       )}
 
@@ -447,6 +622,8 @@ function App() {
                 })
                 return
               }
+
+              await setCharacter(activeSetupPlayer, uiType)
 
               if ((selectedMode === "SOLITAIRE" || selectedMode === "AUTO") && activeSetupPlayer === 1) {
                 const aiType: "HUMAN" | "DEMON" = uiType === "HUMAN" ? "DEMON" : "HUMAN"
@@ -569,6 +746,7 @@ function App() {
           wsRoomId={wsRoomId}
           localPlayerName={wsPlayerName}
           localPlayerId={wsPlayerId}
+          roomState={wsRoomState}
         />
       )}
     </GameWrapper>

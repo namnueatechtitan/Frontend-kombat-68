@@ -6,12 +6,7 @@ import bg from "../assets/images/background-config.png"
 import logo from "../assets/images/logo.png"
 import { getConfig, saveConfig } from "../api/gameApi.ts"
 
-interface Props {
-  onBack: () => void
-  onConfirm: () => void
-}
-
-interface GameConfig {
+export interface GameConfig {
   spawnCost: number
   hexPurchaseCost: number
   initBudget: number
@@ -23,12 +18,25 @@ interface GameConfig {
   maxSpawns: number
 }
 
-export default function ConfigPage({  onConfirm }: Props) {
+interface Props {
+  onBack: () => void
+  onConfirm: (config: GameConfig) => void | Promise<void>
+  initialConfig?: GameConfig | null
+  mode?: "global" | "room"
+}
+
+export default function ConfigPage({ onConfirm, initialConfig, mode = "global" }: Props) {
   const [config, setConfig] = useState<GameConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    if (initialConfig) {
+      setConfig(initialConfig)
+      setLoading(false)
+      return
+    }
+
     getConfig<GameConfig>()
       .then((data) => {
         setConfig(data)
@@ -81,7 +89,7 @@ export default function ConfigPage({  onConfirm }: Props) {
             mt-5 mb-4
           "
         >
-          CONFIG
+          {mode === "room" ? "ROOM CONFIG" : "CONFIG"}
         </h1>
 
         {/* Config Board */}
@@ -132,12 +140,13 @@ export default function ConfigPage({  onConfirm }: Props) {
             onClick={async () => {
               try {
                 setSaving(true)
-                await saveConfig(config)
-                alert("Config saved successfully!")
-                onConfirm()
+                if (mode === "global") {
+                  await saveConfig(config)
+                }
+                await onConfirm(config)
               } catch (err) {
                 console.error(err)
-                alert("Failed to save config")
+                alert(mode === "room" ? "Failed to update room config" : "Failed to save config")
               } finally {
                 setSaving(false)
               }

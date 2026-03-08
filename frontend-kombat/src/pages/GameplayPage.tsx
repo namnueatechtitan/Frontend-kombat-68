@@ -132,129 +132,137 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
     return minion.hp <= 100 ? minion.hp : 100
   }
 
+  const applyGameSnapshot = (data: GameStatus, timelineMode: "append" | "replace" = "append") => {
+    const runtimeMinions = toRuntimeMinions(data.gameState.minions ?? [])
+    const previousRuntimeMinions = previousRuntimeMinionsRef.current
+
+    const backendLogs = data.actionLogs ?? []
+    const backendLogSignature = JSON.stringify(backendLogs)
+    const hasNewBackendLogs =
+      backendLogs.length > 0 &&
+      backendLogSignature !== lastBackendLogSignatureRef.current
+    const latestExecutionLogs = hasNewBackendLogs ? backendLogs : []
+
+    if (hasNewBackendLogs) {
+      if (timelineMode === "replace") {
+        setTimelineLogs(backendLogs)
+      } else {
+        setTimelineLogs((prev) => [...prev, ...backendLogs])
+      }
+    }
+
+    lastBackendLogSignatureRef.current = backendLogSignature
+
+    const currentHpByRuntimeId: Record<string, number> = {}
+    const damagedMinionIds: string[] = []
+    const shooterMinionIds = new Set<string>()
+
+    runtimeMinions.forEach((minion) => {
+      if (typeof minion.hp !== "number") return
+
+      const key = ownerTypeKey(minion.ownerId, minion.type)
+      const prevMax = maxHpByOwnerTypeRef.current[key] ?? 0
+      if (minion.hp > prevMax) {
+        maxHpByOwnerTypeRef.current[key] = minion.hp
+      }
+
+      currentHpByRuntimeId[minion.runtimeId] = minion.hp
+
+      const prevHp = hpByRuntimeIdRef.current[minion.runtimeId]
+      if (typeof prevHp === "number" && minion.hp < prevHp) {
+        damagedMinionIds.push(minion.runtimeId)
+      }
+    })
+
+    latestExecutionLogs.forEach((log) => {
+      const m = log.match(
+        /^P(\d+)\s+SHOOT\s+\w+\s+x=\d+\s+from=\((\d+),(\d+)\)\s+(HIT|KILL)\b/
+      )
+      if (!m) return
+
+      const shooterOwner = Number(m[1])
+      const shooterRow = Number(m[2])
+      const shooterCol = Number(m[3])
+
+      const shooter = runtimeMinions.find(
+        (minion) =>
+          minion.ownerId === shooterOwner &&
+          minion.x === shooterRow &&
+          minion.y === shooterCol
+      )
+
+      if (shooter) {
+        shooterMinionIds.add(shooter.runtimeId)
+      }
+    })
+
+    hpByRuntimeIdRef.current = currentHpByRuntimeId
+    previousRuntimeMinionsRef.current = runtimeMinions
+
+    const combinedShakingIds = Array.from(
+      new Set([...damagedMinionIds, ...Array.from(shooterMinionIds)])
+    )
+
+    if (combinedShakingIds.length > 0) {
+      setShakingMinionIds(combinedShakingIds)
+      setIsScreenShaking(true)
+
+      if (shakeClearTimerRef.current) {
+        clearTimeout(shakeClearTimerRef.current)
+      }
+      if (screenShakeClearTimerRef.current) {
+        clearTimeout(screenShakeClearTimerRef.current)
+      }
+
+      shakeClearTimerRef.current = setTimeout(() => {
+        setShakingMinionIds([])
+      }, 500)
+
+      screenShakeClearTimerRef.current = setTimeout(() => {
+        setIsScreenShaking(false)
+      }, 280)
+    }
+
+    const killCount = latestExecutionLogs.filter((log) => /\bKILL\b/.test(log)).length
+    if (killCount > 0) {
+      const currentTokenSet = new Set(
+        runtimeMinions.map((minion) => `${minion.ownerId}|${minion.type}|${minion.x}|${minion.y}`)
+      )
+
+      const disappeared = previousRuntimeMinions.filter(
+        (minion) => !currentTokenSet.has(`${minion.ownerId}|${minion.type}|${minion.x}|${minion.y}`)
+      )
+
+      const newlyDying = disappeared.slice(0, killCount).map((minion, idx) => ({
+        id: `${minion.runtimeId}-death-${Date.now()}-${idx}`,
+        ownerId: minion.ownerId,
+        type: minion.type,
+        row: minion.x,
+        col: minion.y,
+      }))
+
+      if (newlyDying.length > 0) {
+        setDyingMinions(newlyDying)
+        if (deathClearTimerRef.current) {
+          clearTimeout(deathClearTimerRef.current)
+        }
+        deathClearTimerRef.current = setTimeout(() => {
+          setDyingMinions([])
+        }, 1250)
+      }
+    }
+
+    setGame(data)
+    if (data.gameOver) {
+      setPopup(null)
+      setSelectingType(false)
+    }
+  }
+
   const loadGame = async () => {
     try {
       const data = await getGameStatus()
-      const runtimeMinions = toRuntimeMinions(data.gameState.minions ?? [])
-      const previousRuntimeMinions = previousRuntimeMinionsRef.current
-
-      const backendLogs = data.actionLogs ?? []
-      const backendLogSignature = JSON.stringify(backendLogs)
-      const hasNewBackendLogs =
-        backendLogs.length > 0 &&
-        backendLogSignature !== lastBackendLogSignatureRef.current
-      const latestExecutionLogs = hasNewBackendLogs ? backendLogs : []
-
-      if (hasNewBackendLogs) {
-        setTimelineLogs((prev) => [...prev, ...backendLogs])
-      }
-
-      lastBackendLogSignatureRef.current = backendLogSignature
-
-      const currentHpByRuntimeId: Record<string, number> = {}
-      const damagedMinionIds: string[] = []
-      const shooterMinionIds = new Set<string>()
-
-      runtimeMinions.forEach((minion) => {
-        if (typeof minion.hp !== "number") return
-
-        const key = ownerTypeKey(minion.ownerId, minion.type)
-        const prevMax = maxHpByOwnerTypeRef.current[key] ?? 0
-        if (minion.hp > prevMax) {
-          maxHpByOwnerTypeRef.current[key] = minion.hp
-        }
-
-        currentHpByRuntimeId[minion.runtimeId] = minion.hp
-
-        const prevHp = hpByRuntimeIdRef.current[minion.runtimeId]
-        if (typeof prevHp === "number" && minion.hp < prevHp) {
-          damagedMinionIds.push(minion.runtimeId)
-        }
-      })
-
-      latestExecutionLogs.forEach((log) => {
-        const m = log.match(
-          /^P(\d+)\s+SHOOT\s+\w+\s+x=\d+\s+from=\((\d+),(\d+)\)\s+(HIT|KILL)\b/
-        )
-        if (!m) return
-
-        const shooterOwner = Number(m[1])
-        const shooterRow = Number(m[2])
-        const shooterCol = Number(m[3])
-
-        const shooter = runtimeMinions.find(
-          (minion) =>
-            minion.ownerId === shooterOwner &&
-            minion.x === shooterRow &&
-            minion.y === shooterCol
-        )
-
-        if (shooter) {
-          shooterMinionIds.add(shooter.runtimeId)
-        }
-      })
-
-      hpByRuntimeIdRef.current = currentHpByRuntimeId
-      previousRuntimeMinionsRef.current = runtimeMinions
-
-      const combinedShakingIds = Array.from(
-        new Set([...damagedMinionIds, ...Array.from(shooterMinionIds)])
-      )
-
-      if (combinedShakingIds.length > 0) {
-        setShakingMinionIds(combinedShakingIds)
-        setIsScreenShaking(true)
-
-        if (shakeClearTimerRef.current) {
-          clearTimeout(shakeClearTimerRef.current)
-        }
-        if (screenShakeClearTimerRef.current) {
-          clearTimeout(screenShakeClearTimerRef.current)
-        }
-
-        shakeClearTimerRef.current = setTimeout(() => {
-          setShakingMinionIds([])
-        }, 500)
-
-        screenShakeClearTimerRef.current = setTimeout(() => {
-          setIsScreenShaking(false)
-        }, 280)
-      }
-
-      const killCount = latestExecutionLogs.filter((log) => /\bKILL\b/.test(log)).length
-      if (killCount > 0) {
-        const currentTokenSet = new Set(
-          runtimeMinions.map((minion) => `${minion.ownerId}|${minion.type}|${minion.x}|${minion.y}`)
-        )
-
-        const disappeared = previousRuntimeMinions.filter(
-          (minion) => !currentTokenSet.has(`${minion.ownerId}|${minion.type}|${minion.x}|${minion.y}`)
-        )
-
-        const newlyDying = disappeared.slice(0, killCount).map((minion, idx) => ({
-          id: `${minion.runtimeId}-death-${Date.now()}-${idx}`,
-          ownerId: minion.ownerId,
-          type: minion.type,
-          row: minion.x,
-          col: minion.y,
-        }))
-
-        if (newlyDying.length > 0) {
-          setDyingMinions(newlyDying)
-          if (deathClearTimerRef.current) {
-            clearTimeout(deathClearTimerRef.current)
-          }
-          deathClearTimerRef.current = setTimeout(() => {
-            setDyingMinions([])
-          }, 1250)
-        }
-      }
-
-      setGame(data)
-      if (data.gameOver) {
-        setPopup(null)
-        setSelectingType(false)
-      }
+      applyGameSnapshot(data, "append")
     } catch (err) {
       console.error(err)
     } finally {
@@ -266,17 +274,20 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
     if (!wsRoomId) {
       loadGame()
     } else {
+      const destination = `/topic/game/${wsRoomId}`
+      const handler = (payload: unknown) => {
+        if (!payload) return
+        applyGameSnapshot(payload as GameStatus, "replace")
+        setLoading(false)
+      }
+
       stompWs.connect(() => {
-        stompWs.subscribe(`/topic/game/${wsRoomId}`, (payload) => {
-          if (!payload) return
-          setGame(payload as GameStatus)
-          setLoading(false)
-          if (Array.isArray((payload as GameStatus).actionLogs)) {
-            setTimelineLogs((payload as GameStatus).actionLogs)
-          }
-        })
+        stompWs.subscribe(destination, handler)
       })
-      return
+
+      return () => {
+        stompWs.unsubscribe(destination, handler)
+      }
     }
 
     getSetupSummary()
@@ -561,8 +572,10 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
     ((phase === "PLAYER_ACTION" && selectedHexOwnedByCurrentPlayer) ||
       (phase === "FREE_SPAWN" && selectedHexOwnedByCurrentPlayer))
 
-  const p1Character: Character = setupSummary?.players?.player1?.character ?? "HUMAN"
-  const p2Character: Character = setupSummary?.players?.player2?.character ?? "DEMON"
+  const p1Character: Character =
+    (wsRoomId ? roomState?.player1Character : setupSummary?.players?.player1?.character) ?? "HUMAN"
+  const p2Character: Character =
+    (wsRoomId ? roomState?.player2Character : setupSummary?.players?.player2?.character) ?? "DEMON"
 
   const p1Minions = boardMinionsWithNames.filter((minion) => minion.ownerId === 1)
   const p2Minions = boardMinionsWithNames.filter((minion) => minion.ownerId === 2)

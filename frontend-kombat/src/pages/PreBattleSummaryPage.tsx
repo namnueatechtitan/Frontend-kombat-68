@@ -37,15 +37,16 @@ export default function PreBattlePage({ onBack, onConfirm, wsRoomState, isRoomMo
     if (!isRoomMode || !wsRoomState) return null
     return {
       mode: wsRoomState.mode,
-      config: {
-        initBudget: 1500,
+      config: wsRoomState.config ?? {
+        initBudget: 2000,
         turnBudget: 120,
-        spawnCost: 120,
-        hexPurchaseCost: 600,
-        maxBudget: 4000,
-        maxTurns: 20,
-        maxSpawns: 12,
+        spawnCost: 200,
+        hexPurchaseCost: 300,
+        maxBudget: 10000,
+        maxTurns: 40,
+        maxSpawns: 10,
         interestPct: 3,
+        initHp: 500,
       },
       players: {
         player1: {

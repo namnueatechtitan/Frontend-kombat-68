@@ -26,6 +26,17 @@ export interface RoomConfiguredMinion {
 export interface RoomState {
   roomId: string
   mode: ModeType
+  config?: {
+    initBudget?: number
+    turnBudget?: number
+    spawnCost?: number
+    hexPurchaseCost?: number
+    maxBudget?: number
+    maxTurns?: number
+    maxSpawns?: number
+    interestPct?: number
+    initHp?: number
+  }
   host: string
   players: string[]
   started: boolean
@@ -42,7 +53,12 @@ export interface RoomState {
 
 interface Props {
   onBack: () => void
+  onConfig?: () => void
   onRoomConnected: (roomId: string, mode: ModeType, playerName: string, localPlayerId: number | null) => void
+  initialRoomId?: string | null
+  initialMode?: ModeType | null
+  initialPlayerName?: string | null
+  initialRoomState?: RoomState | null
 }
 
 const PLAYER_NAME_STORAGE_KEY = "kombat:lobby-player-name"
@@ -60,16 +76,29 @@ const resolvePlayerId = (room: RoomState | null, playerName: string): number | n
   return null
 }
 
-export default function GameLobbyPage({ onRoomConnected }: Props) {
+export default function GameLobbyPage({
+  onRoomConnected,
+  onConfig,
+  initialRoomId,
+  initialMode,
+  initialPlayerName,
+  initialRoomState,
+}: Props) {
   const [playerName, setPlayerName] = useState("")
   const [pendingPlayerName, setPendingPlayerName] = useState("")
-  const [mode, setMode] = useState<ModeType>("DUEL")
-  const [roomCode, setRoomCode] = useState(() => randomRoomId())
-  const [roomState, setRoomState] = useState<RoomState | null>(null)
+  const [mode, setMode] = useState<ModeType>(initialMode ?? "DUEL")
+  const [roomCode, setRoomCode] = useState(() => initialRoomId?.trim() || randomRoomId())
+  const [roomState, setRoomState] = useState<RoomState | null>(initialRoomState ?? null)
   const [connected, setConnected] = useState(false)
   const [nameError, setNameError] = useState("")
 
   useEffect(() => {
+    if (initialPlayerName?.trim()) {
+      setPlayerName(initialPlayerName.trim())
+      setPendingPlayerName(initialPlayerName.trim())
+      return
+    }
+
     const savedName = window.localStorage.getItem(PLAYER_NAME_STORAGE_KEY)?.trim() ?? ""
     if (savedName) {
       setPlayerName(savedName)
@@ -78,7 +107,25 @@ export default function GameLobbyPage({ onRoomConnected }: Props) {
     }
 
     setPendingPlayerName("")
-  }, [])
+  }, [initialPlayerName])
+
+  useEffect(() => {
+    if (initialMode) {
+      setMode(initialMode)
+    }
+  }, [initialMode])
+
+  useEffect(() => {
+    if (initialRoomId?.trim()) {
+      setRoomCode(initialRoomId.trim())
+    }
+  }, [initialRoomId])
+
+  useEffect(() => {
+    if (initialRoomState) {
+      setRoomState(initialRoomState)
+    }
+  }, [initialRoomState])
 
   const humanPlayers = (roomState?.players ?? []).filter(
     (name) => !["BOT", "BOT_A", "BOT_B"].includes(name.toUpperCase()),
@@ -151,6 +198,7 @@ export default function GameLobbyPage({ onRoomConnected }: Props) {
   const phaseLabel = roomState?.setupPhase ?? "LOBBY"
   const currentRoomCode = roomState?.roomId ?? (roomCode.trim() || "------")
   const isNameConfirmed = playerName.length > 0
+  const canConfigureRoom = !!roomState && roomState.host === playerName && !roomState.started
 
   const handleConfirmPlayerName = () => {
     const trimmedName = pendingPlayerName.trim()
@@ -248,7 +296,7 @@ export default function GameLobbyPage({ onRoomConnected }: Props) {
                     <div className="min-w-0 rounded-[16px] border border-white/10 bg-black/24 px-3 py-3">
                       <div className="text-[10px] tracking-[0.26em] text-white/44">STATUS</div>
                       <div className="mt-2 break-words text-[13px] font-extrabold leading-5 text-[#f3c637]">
-                        {connected ? "Connected" : "Connecting"}
+                        {connected ? "Connect" : "Connecting"}
                       </div>
                     </div>
                     <div className="min-w-0 rounded-[16px] border border-white/10 bg-black/24 px-3 py-3">
@@ -374,6 +422,17 @@ export default function GameLobbyPage({ onRoomConnected }: Props) {
                       ? "Room ready. Both players can continue to setup."
                       : "Waiting for the second player to enter the room."}
                   </div>
+
+                  {canConfigureRoom && (
+                    <button
+                      type="button"
+                      onClick={onConfig}
+                      className="w-full rounded-[15px] border border-[#3d8d75] px-4 py-3 text-[13px] font-black leading-[1.05] text-white shadow-md transition duration-300 hover:scale-[1.02] hover:shadow-xl"
+                      style={{ backgroundColor: "#297960" }}
+                    >
+                      Room Config
+                    </button>
+                  )}
 
                   {roomState?.error && (
                     <div className="rounded-[16px] border border-red-400/25 bg-red-500/12 px-4 py-3 text-sm text-red-200">
