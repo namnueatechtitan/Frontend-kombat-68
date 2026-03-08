@@ -19,11 +19,20 @@ import { stompWs } from "../ws/stompWs"
 
 type Character = "HUMAN" | "DEMON"
 
+interface RoomStateSnapshot {
+  mode?: "DUEL" | "SOLITAIRE" | "AUTO"
+  player1Character?: Character
+  player2Character?: Character
+  player1ConfiguredMinions?: Array<{ type?: string; kindName?: string; name?: string }>
+  player2ConfiguredMinions?: Array<{ type?: string; kindName?: string; name?: string }>
+}
+
 interface Props {
   onPlayAgain: () => void | Promise<void>
   wsRoomId?: string | null
   localPlayerName?: string | null
   localPlayerId?: number | null
+  roomState?: RoomStateSnapshot | null
 }
 
 interface SetupSummaryData {
@@ -79,7 +88,7 @@ const toRuntimeMinions = (
   })
 }
 
-export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, localPlayerId }: Props) {
+export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, localPlayerId, roomState }: Props) {
   const [game, setGame] = useState<GameStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
@@ -267,7 +276,9 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
           }
         })
       })
+      return
     }
+
     getSetupSummary()
       .then(setSetupSummary)
       .catch((err) => console.error("Failed to load setup summary", err))
@@ -411,8 +422,9 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
     const currentTurnKey = `${game.gameState.turnNumber}-${game.currentPlayer}`
     const hasBoughtHexThisTurn = lastBoughtHexTurnKey === currentTurnKey
     const hasSpawnedThisTurn = lastSpawnTurnKey === currentTurnKey
-    const isSolitaire = setupSummary?.mode === "SOLITAIRE"
-    const isAutoMode = setupSummary?.mode === "AUTO"
+    const effectiveMode = wsRoomId ? roomState?.mode : setupSummary?.mode
+    const isSolitaire = effectiveMode === "SOLITAIRE"
+    const isAutoMode = effectiveMode === "AUTO"
     const isBotTurn = isAutoMode || (isSolitaire && game.currentPlayer === 2)
     const isRemotePlayerTurn = !!wsRoomId && localPlayerId != null && localPlayerId !== game.currentPlayer
     const isInteractiveTurn = !isBotTurn && !isRemotePlayerTurn
@@ -458,8 +470,9 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   const currentPlayerBudget =
     game.playerEconomy?.[String(game.currentPlayer)]?.budget ?? budget
   const isGameOver = game.gameOver
-  const isSolitaire = setupSummary?.mode === "SOLITAIRE"
-  const isAutoMode = setupSummary?.mode === "AUTO"
+  const effectiveMode = wsRoomId ? roomState?.mode : setupSummary?.mode
+  const isSolitaire = effectiveMode === "SOLITAIRE"
+  const isAutoMode = effectiveMode === "AUTO"
   const isBotTurn = isAutoMode || (isSolitaire && game.currentPlayer === 2)
   const isRemotePlayerTurn = !!wsRoomId && localPlayerId != null && localPlayerId !== game.currentPlayer
   const isInteractiveTurn = !isBotTurn && !isRemotePlayerTurn
@@ -467,15 +480,20 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
     ...minion,
     hpPercent: resolveHpPercent(minion),
   }))
-  const shouldUseSetupNames = !wsRoomId
+  const definedMinionsP1 = wsRoomId
+    ? roomState?.player1ConfiguredMinions
+    : setupSummary?.players?.player1?.definedMinions
+  const definedMinionsP2 = wsRoomId
+    ? roomState?.player2ConfiguredMinions
+    : setupSummary?.players?.player2?.definedMinions
   const setupNameMap = new Map<string, string>()
-  ;((shouldUseSetupNames ? setupSummary?.players?.player1?.definedMinions : []) ?? []).forEach((m) => {
+  ;((definedMinionsP1 ?? [])).forEach((m) => {
     const configuredName = m.kindName ?? m.name
     if (m.type && configuredName) {
       setupNameMap.set(`1|${m.type.toUpperCase()}`, configuredName)
     }
   })
-  ;((shouldUseSetupNames ? setupSummary?.players?.player2?.definedMinions : []) ?? []).forEach((m) => {
+  ;((definedMinionsP2 ?? [])).forEach((m) => {
     const configuredName = m.kindName ?? m.name
     if (m.type && configuredName) {
       setupNameMap.set(`2|${m.type.toUpperCase()}`, configuredName)
