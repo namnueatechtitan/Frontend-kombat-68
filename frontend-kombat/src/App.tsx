@@ -55,14 +55,8 @@ const waitingPhases: RoomSetupPhase[] = [
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function App() {
-  const demonNameByType = new Map(
-    demonMinions.map((minion) => [minion.type, minion.name])
-  )
-  const humanNameByType = new Map(
-    humanMinions.map((minion) => [minion.type, minion.name])
-  )
-  const defaultNameMapForFaction = (faction: "HUMAN" | "DEMON") =>
-    faction === "DEMON" ? demonNameByType : humanNameByType
+  const resolveSharedMinionName = (name: string | undefined, type: MinionType) =>
+    name?.trim() ? name.trim() : type
 
   const [page, setPage] = useState<AppPage>("start")
   const [configReturnPage, setConfigReturnPage] = useState<AppPage>("lobby")
@@ -141,7 +135,8 @@ function App() {
   const usesSharedDuelSetup = effectiveMode === "DUEL"
   const isHostManagedRoomMode =
     !!wsRoomId && (wsRoomState?.mode === "DUEL" || wsRoomState?.mode === "AUTO")
-  const currentMinions = usesSharedDuelSetup ? sharedMinions : minionsByPlayer[activeSetupPlayer]
+  const usesSharedRoomSetup = usesSharedDuelSetup || isHostManagedRoomMode
+  const currentMinions = usesSharedRoomSetup ? sharedMinions : minionsByPlayer[activeSetupPlayer]
   const effectiveRoomMinionTypeCount = wsRoomState?.effectiveMinionTypeCount ?? minionTypeCount
   const roomPhase = wsRoomState?.setupPhase
   const isRoomMinionCountTurn = !!wsRoomId && roomPhase === "MINION_TYPE_COUNT"
@@ -432,7 +427,7 @@ function App() {
       defenseFactor: minion.defenseFactor,
     }))
     setSharedMinions(nextShared)
-  }, [demonNameByType, humanNameByType, usesSharedDuelSetup, wsRoomId, wsRoomState?.sharedConfiguredMinions])
+  }, [usesSharedDuelSetup, wsRoomId, wsRoomState?.sharedConfiguredMinions])
 
   const handleModeConfirm = async (
     mode: "DUEL" | "SOLITAIRE" | "AUTO"
@@ -448,7 +443,7 @@ function App() {
   }
 
   const handleRemove = (type: MinionType) => {
-    if (usesSharedDuelSetup) {
+    if (usesSharedRoomSetup) {
       setSharedMinions(prev => prev.filter(m => m.type !== type))
       return
     }
@@ -493,16 +488,9 @@ function App() {
       if (usesSharedDuelSetup) {
         const playerOnePayload = setupPayload.map((minion) => ({
           ...minion,
-          name: minion.name?.trim()
-            ? minion.name
-            : defaultNameMapForFaction(currentFaction === "DEMON" ? "DEMON" : "HUMAN").get(minion.type as MinionType) ?? minion.name,
+          name: resolveSharedMinionName(minion.name, minion.type as MinionType),
         }))
-        const playerTwoFaction: "HUMAN" | "DEMON" =
-          currentFaction === "DEMON" ? "HUMAN" : "DEMON"
-        const playerTwoPayload = setupPayload.map((minion) => ({
-          ...minion,
-          name: defaultNameMapForFaction(playerTwoFaction).get(minion.type as MinionType) ?? minion.name,
-        }))
+        const playerTwoPayload = playerOnePayload.map((minion) => ({ ...minion }))
 
         await setupFull(1, playerOnePayload)
         await setupFull(2, playerTwoPayload)
@@ -512,15 +500,10 @@ function App() {
       await setupFull(activeSetupPlayer, setupPayload)
 
       if ((selectedMode === "SOLITAIRE" || selectedMode === "AUTO") && isPlayer1) {
-        const mirroredPayload = (() => {
-          const aiFaction: "HUMAN" | "DEMON" =
-            currentFaction === "DEMON" ? "HUMAN" : "DEMON"
-          const aiNameMap = aiFaction === "DEMON" ? demonNameByType : humanNameByType
-          return setupPayload.map((minion) => ({
-            ...minion,
-            name: aiNameMap.get(minion.type as MinionType) ?? minion.name,
-          }))
-        })()
+        const mirroredPayload = setupPayload.map((minion) => ({
+          ...minion,
+          name: resolveSharedMinionName(minion.name, minion.type as MinionType),
+        }))
 
         await setupFull(2, mirroredPayload)
         setCurrentFaction(null)
@@ -692,6 +675,9 @@ function App() {
                   return
                 }
                 setMinionTypeCount(count)
+                setSharedMinions([])
+                setMinionsByPlayer({ 1: [], 2: [] })
+                setSelectedMinion(null)
                 stompWs.send("/app/submit-minion-type-count", {
                   roomId: wsRoomId,
                   count,
@@ -823,7 +809,7 @@ function App() {
             minion={selectedMinion}
             onBack={handleBack}
             onConfirm={(name, code, defenseFactor) => {
-              if (usesSharedDuelSetup) {
+              if (usesSharedRoomSetup) {
                 setSharedMinions(prev => [
                   ...prev.filter(m => m.type !== selectedMinion.type),
                   { ...selectedMinion, name, strategy: code, defenseFactor }
@@ -848,7 +834,7 @@ function App() {
             minion={selectedMinion}
             onBack={handleBack}
             onConfirm={(name, code, defenseFactor) => {
-              if (usesSharedDuelSetup) {
+              if (usesSharedRoomSetup) {
                 setSharedMinions(prev => [
                   ...prev.filter(m => m.type !== selectedMinion.type),
                   { ...selectedMinion, name, strategy: code, defenseFactor }
