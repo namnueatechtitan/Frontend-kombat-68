@@ -47,6 +47,9 @@ export interface RoomState {
   effectiveMinionTypeCount?: number
   player1Character?: Character
   player2Character?: Character
+  sharedConfiguredMinions?: RoomConfiguredMinion[]
+  player1SharedSetupConfirmed?: boolean
+  player2SharedSetupConfirmed?: boolean
   player1ConfiguredMinions?: RoomConfiguredMinion[]
   player2ConfiguredMinions?: RoomConfiguredMinion[]
 }

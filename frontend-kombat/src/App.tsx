@@ -61,6 +61,8 @@ function App() {
   const humanNameByType = new Map(
     humanMinions.map((minion) => [minion.type, minion.name])
   )
+  const defaultNameMapForFaction = (faction: "HUMAN" | "DEMON") =>
+    faction === "DEMON" ? demonNameByType : humanNameByType
 
   const [page, setPage] = useState<AppPage>("start")
   const [configReturnPage, setConfigReturnPage] = useState<AppPage>("lobby")
@@ -84,6 +86,7 @@ function App() {
       1: [],
       2: []
     })
+  const [sharedMinions, setSharedMinions] = useState<ConfiguredMinion[]>([])
   const [backendWakeState, setBackendWakeState] = useState<"idle" | "waking" | "ready" | "failed">("idle")
   const bgmRef = useRef<HTMLAudioElement | null>(null)
   const hasRestoredSessionRef = useRef(false)
@@ -101,6 +104,7 @@ function App() {
     setWsRoomState(null)
     setRoomStatusText(null)
     setMinionsByPlayer({ 1: [], 2: [] })
+    setSharedMinions([])
     window.localStorage.removeItem(APP_SESSION_STORAGE_KEY)
   }
 
@@ -133,7 +137,9 @@ function App() {
   }
 
   const activeSetupPlayer = (wsRoomId && wsPlayerId ? wsPlayerId : setupPlayer) as 1 | 2
-  const currentMinions = minionsByPlayer[activeSetupPlayer]
+  const effectiveMode = (wsRoomId ? wsRoomState?.mode : selectedMode) ?? null
+  const usesSharedDuelSetup = effectiveMode === "DUEL"
+  const currentMinions = usesSharedDuelSetup ? sharedMinions : minionsByPlayer[activeSetupPlayer]
   const effectiveRoomMinionTypeCount = wsRoomState?.effectiveMinionTypeCount ?? minionTypeCount
   const roomPhase = wsRoomState?.setupPhase
   const isRoomMinionCountTurn = !!wsRoomId && roomPhase === "MINION_TYPE_COUNT"
@@ -171,6 +177,7 @@ function App() {
         wsPlayerId?: number | null
         roomStatusText?: string | null
         minionsByPlayer?: Record<1 | 2, ConfiguredMinion[]>
+        sharedMinions?: ConfiguredMinion[]
       }
 
       if (saved.page) {
@@ -190,6 +197,7 @@ function App() {
       if (saved.wsPlayerId !== undefined) setWsPlayerId(saved.wsPlayerId)
       if (saved.roomStatusText !== undefined) setRoomStatusText(saved.roomStatusText)
       if (saved.minionsByPlayer) setMinionsByPlayer(saved.minionsByPlayer)
+      if (saved.sharedMinions) setSharedMinions(saved.sharedMinions)
     } catch (error) {
       console.error("Failed to restore app session", error)
       window.localStorage.removeItem(APP_SESSION_STORAGE_KEY)
@@ -230,6 +238,7 @@ function App() {
         wsPlayerId,
         roomStatusText,
         minionsByPlayer,
+        sharedMinions,
       }),
     )
   }, [
@@ -241,6 +250,7 @@ function App() {
     selectedMinion,
     selectedMode,
     setupPlayer,
+    sharedMinions,
     wsPlayerId,
     wsPlayerName,
     wsRoomId,
@@ -340,11 +350,19 @@ function App() {
         break
       case "MINION_TYPE_COUNT":
         setPage("minionType")
-        setRoomStatusText("Both players can choose minion type count now")
+        setRoomStatusText(
+          wsRoomState.mode === "DUEL"
+            ? "Host chooses duel minion count. The other player waits for setup to continue."
+            : "Both players can choose minion type count now"
+        )
         break
       case "CHARACTER_SELECT":
         setPage("selectUI")
-        setRoomStatusText("Both players can choose character now")
+        setRoomStatusText(
+          wsRoomState.mode === "DUEL"
+            ? "Player 1 chooses the duel character alignment. Player 2 is assigned automatically."
+            : "Both players can choose character now"
+        )
         break
       case "MINION_SETUP": {
         const localCharacter = wsPlayerId === 1 ? wsRoomState.player1Character : wsRoomState.player2Character
@@ -352,7 +370,15 @@ function App() {
         if (page !== "strategy") {
           setPage(localCharacter === "DEMON" ? "minionSetupDemon" : "minionSetupHuman")
         }
-        setRoomStatusText("Both players can configure minions and strategies now")
+        if (wsRoomState.mode === "DUEL") {
+          setRoomStatusText(
+            wsPlayerId === 1
+              ? "Host is configuring the shared duel minion set."
+              : "Host is configuring the shared duel minion set. Please wait."
+          )
+        } else {
+          setRoomStatusText("Both players can configure minions and strategies now")
+        }
         break
       }
       case "PRE_BATTLE":
@@ -363,6 +389,25 @@ function App() {
         break
     }
   }, [page, selectedMode, wsPlayerId, wsRoomState])
+
+  useEffect(() => {
+    if (!wsRoomId || !usesSharedDuelSetup) {
+      return
+    }
+    const nextShared = (wsRoomState?.sharedConfiguredMinions ?? []).map((minion) => ({
+      type: minion.type as MinionType,
+      name: minion.name,
+      image: humanMinions.find((item) => item.type === minion.type)?.image
+        ?? demonMinions.find((item) => item.type === minion.type)?.image
+        ?? "",
+      preview: humanMinions.find((item) => item.type === minion.type)?.preview
+        ?? demonMinions.find((item) => item.type === minion.type)?.preview
+        ?? "",
+      strategy: minion.strategy,
+      defenseFactor: minion.defenseFactor,
+    }))
+    setSharedMinions(nextShared)
+  }, [demonNameByType, humanNameByType, usesSharedDuelSetup, wsRoomId, wsRoomState?.sharedConfiguredMinions])
 
   const handleModeConfirm = async (
     mode: "DUEL" | "SOLITAIRE" | "AUTO"
@@ -378,6 +423,10 @@ function App() {
   }
 
   const handleRemove = (type: MinionType) => {
+    if (usesSharedDuelSetup) {
+      setSharedMinions(prev => prev.filter(m => m.type !== type))
+      return
+    }
     setMinionsByPlayer(prev => ({
       ...prev,
       [activeSetupPlayer]: prev[activeSetupPlayer].filter(m => m.type !== type)
@@ -404,6 +453,10 @@ function App() {
           alert("Not your setup turn yet")
           return
         }
+        if (wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
+          alert("Only the host can configure duel minions")
+          return
+        }
         stompWs.send("/app/submit-room-minion-setup", {
           roomId: wsRoomId,
           minions: setupPayload,
@@ -412,6 +465,25 @@ function App() {
       }
 
       const isPlayer1 = activeSetupPlayer === 1
+      if (usesSharedDuelSetup) {
+        const playerOnePayload = setupPayload.map((minion) => ({
+          ...minion,
+          name: minion.name?.trim()
+            ? minion.name
+            : defaultNameMapForFaction(currentFaction === "DEMON" ? "DEMON" : "HUMAN").get(minion.type as MinionType) ?? minion.name,
+        }))
+        const playerTwoFaction: "HUMAN" | "DEMON" =
+          currentFaction === "DEMON" ? "HUMAN" : "DEMON"
+        const playerTwoPayload = setupPayload.map((minion) => ({
+          ...minion,
+          name: defaultNameMapForFaction(playerTwoFaction).get(minion.type as MinionType) ?? minion.name,
+        }))
+
+        await setupFull(1, playerOnePayload)
+        await setupFull(2, playerTwoPayload)
+        setPage("preBattle")
+        return
+      }
       await setupFull(activeSetupPlayer, setupPayload)
 
       if ((selectedMode === "SOLITAIRE" || selectedMode === "AUTO") && isPlayer1) {
@@ -585,15 +657,19 @@ function App() {
         <MinionTypePage
           onBack={handleBack}
           onConfirm={async (count) => {
-            if (wsRoomId) {
-              if (!isRoomMinionCountTurn) {
-                alert("Minion type selection is not available yet")
-                return
-              }
-              setMinionTypeCount(count)
-              stompWs.send("/app/submit-minion-type-count", {
-                roomId: wsRoomId,
-                count,
+              if (wsRoomId) {
+                if (!isRoomMinionCountTurn) {
+                  alert("Minion type selection is not available yet")
+                  return
+                }
+                if (wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
+                  alert("Only the host can choose duel minion count")
+                  return
+                }
+                setMinionTypeCount(count)
+                stompWs.send("/app/submit-minion-type-count", {
+                  roomId: wsRoomId,
+                  count,
               })
               return
             }
@@ -619,6 +695,10 @@ function App() {
                   alert("Character selection is not available yet")
                   return
                 }
+                if (wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
+                  alert("Player 1 chooses the duel character alignment")
+                  return
+                }
                 setCurrentFaction(uiType)
                 stompWs.send("/app/select-room-character", {
                   roomId: wsRoomId,
@@ -628,6 +708,19 @@ function App() {
               }
 
               await setCharacter(activeSetupPlayer, uiType)
+
+              if (selectedMode === "DUEL") {
+                const oppositeType: "HUMAN" | "DEMON" = uiType === "HUMAN" ? "DEMON" : "HUMAN"
+                await setCharacter(2, oppositeType)
+                setCurrentFaction(uiType)
+                setSelectedMinion(null)
+                setPage(
+                  uiType === "DEMON"
+                    ? "minionSetupDemon"
+                    : "minionSetupHuman"
+                )
+                return
+              }
 
               if ((selectedMode === "SOLITAIRE" || selectedMode === "AUTO") && activeSetupPlayer === 1) {
                 const aiType: "HUMAN" | "DEMON" = uiType === "HUMAN" ? "DEMON" : "HUMAN"
@@ -657,6 +750,10 @@ function App() {
               alert("Minion setup is not available yet")
               return
             }
+            if (wsRoomId && wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
+              alert("Only the host can configure duel minions")
+              return
+            }
             setSelectedMinion({
               ...minion,
               strategy: minion.strategy || "",
@@ -679,6 +776,10 @@ function App() {
               alert("Minion setup is not available yet")
               return
             }
+            if (wsRoomId && wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
+              alert("Only the host can configure duel minions")
+              return
+            }
             setSelectedMinion({
               ...minion,
               strategy: minion.strategy || "",
@@ -697,6 +798,15 @@ function App() {
             minion={selectedMinion}
             onBack={handleBack}
             onConfirm={(name, code, defenseFactor) => {
+              if (usesSharedDuelSetup) {
+                setSharedMinions(prev => [
+                  ...prev.filter(m => m.type !== selectedMinion.type),
+                  { ...selectedMinion, name, strategy: code, defenseFactor }
+                ])
+                setSelectedMinion(null)
+                setPage("minionSetupDemon")
+                return
+              }
               setMinionsByPlayer(prev => ({
                 ...prev,
                 [activeSetupPlayer]: [
@@ -713,6 +823,15 @@ function App() {
             minion={selectedMinion}
             onBack={handleBack}
             onConfirm={(name, code, defenseFactor) => {
+              if (usesSharedDuelSetup) {
+                setSharedMinions(prev => [
+                  ...prev.filter(m => m.type !== selectedMinion.type),
+                  { ...selectedMinion, name, strategy: code, defenseFactor }
+                ])
+                setSelectedMinion(null)
+                setPage("minionSetupHuman")
+                return
+              }
               setMinionsByPlayer(prev => ({
                 ...prev,
                 [activeSetupPlayer]: [

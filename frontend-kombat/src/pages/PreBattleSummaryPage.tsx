@@ -51,11 +51,17 @@ export default function PreBattlePage({ onBack, onConfirm, wsRoomState, isRoomMo
       players: {
         player1: {
           character: wsRoomState.player1Character,
-          definedMinions: wsRoomState.player1ConfiguredMinions ?? [],
+          definedMinions:
+            wsRoomState.mode === "DUEL"
+              ? (wsRoomState.sharedConfiguredMinions ?? [])
+              : (wsRoomState.player1ConfiguredMinions ?? []),
         },
         player2: {
           character: wsRoomState.player2Character,
-          definedMinions: wsRoomState.player2ConfiguredMinions ?? [],
+          definedMinions:
+            wsRoomState.mode === "DUEL"
+              ? (wsRoomState.sharedConfiguredMinions ?? [])
+              : (wsRoomState.player2ConfiguredMinions ?? []),
         },
       },
     }
