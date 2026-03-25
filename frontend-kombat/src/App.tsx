@@ -19,6 +19,7 @@ import PreBattlePage from "./pages/PreBattleSummaryPage"
 import { getConfig, resetGame, setCharacter, setMode, setupFull } from "./api/gameApi"
 import { stompWs } from "./ws/stompWs"
 import gameStartBgm from "./Soubd_Audio/Game start.mp3"
+import gameplayBgm from "./Soubd_Audio/Gameplay.mp3"
 import { demonMinions } from "./data/demonMinions"
 import { humanMinions } from "./data/humanMinions"
 
@@ -273,10 +274,13 @@ function App() {
     const bgm = bgmRef.current
     if (!bgm) return
 
-    if (page === "game") {
+    const nextTrack = page === "game" ? gameplayBgm : gameStartBgm
+
+    if (!bgm.src.endsWith(nextTrack)) {
       bgm.pause()
+      bgm.src = nextTrack
       bgm.currentTime = 0
-      return
+      bgm.load()
     }
 
     void bgm.play().catch(() => {})

@@ -93,11 +93,10 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   const [loading, setLoading] = useState(true)
   const [timelineLogs, setTimelineLogs] = useState<string[]>([])
   const [lastBoughtHexTurnKey, setLastBoughtHexTurnKey] = useState<string | null>(null)
-  const [lastSpawnTurnKey, setLastSpawnTurnKey] = useState<string | null>(null)
   const [shakingMinionIds, setShakingMinionIds] = useState<string[]>([])
   const [dyingMinions, setDyingMinions] = useState<DyingMinionEffect[]>([])
   const [isScreenShaking, setIsScreenShaking] = useState(false)
-  const autoEndTurnKeyRef = useRef<string | null>(null)
+  const pendingAutoAdvanceTurnKeyRef = useRef<string | null>(null)
   const lastBackendLogSignatureRef = useRef("")
   const hpByRuntimeIdRef = useRef<Record<string, number>>({})
   const previousRuntimeMinionsRef = useRef<RuntimeMinion[]>([])
@@ -114,6 +113,7 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   const [bgOffset, setBgOffset] = useState({ x: 0, y: 0 })
 
   const [selectingType, setSelectingType] = useState(false)
+  const [isResolvingTurn, setIsResolvingTurn] = useState(false)
   const [setupSummary, setSetupSummary] = useState<SetupSummaryData | null>(null)
   const pollIntervalMs = game?.gameState.phase === "EXECUTION" ? 250 : 1000
 
@@ -133,6 +133,15 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   }
 
   const applyGameSnapshot = (data: GameStatus, timelineMode: "append" | "replace" = "append") => {
+    const currentSnapshotTurnKey = `${data.gameState.turnNumber}-${data.currentPlayer}`
+    if (
+      pendingAutoAdvanceTurnKeyRef.current &&
+      (data.gameOver || pendingAutoAdvanceTurnKeyRef.current !== currentSnapshotTurnKey)
+    ) {
+      pendingAutoAdvanceTurnKeyRef.current = null
+      setIsResolvingTurn(false)
+    }
+
     const runtimeMinions = toRuntimeMinions(data.gameState.minions ?? [])
     const previousRuntimeMinions = previousRuntimeMinionsRef.current
 
@@ -335,7 +344,18 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   const handleSpawn = async (type: string) => {
     if (!popup || !game || game.gameOver) return
 
+    const turnKey = `${game.gameState.turnNumber}-${game.currentPlayer}`
+    const shouldAutoEndTurn = game.gameState.phase === "PLAYER_ACTION"
+
     try {
+      setSelectingType(false)
+      setPopup(null)
+
+      if (shouldAutoEndTurn) {
+        pendingAutoAdvanceTurnKeyRef.current = turnKey
+        setIsResolvingTurn(true)
+      }
+
       if (wsRoomId) {
         if (isRemotePlayerTurn) return
         stompWs.send("/app/player-action", {
@@ -345,18 +365,16 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
           row: popup.row,
           col: popup.col,
         })
-        if (game.gameState.phase === "PLAYER_ACTION") {
-          setLastSpawnTurnKey(`${game.gameState.turnNumber}-${game.currentPlayer}`)
+        if (shouldAutoEndTurn) {
+          stompWs.send("/app/player-action", {
+            roomId: wsRoomId,
+            actionType: "END_TURN",
+          })
         }
-        setSelectingType(false)
-        setPopup(null)
         return
       }
-      await spawnMinion(type, popup.row, popup.col)
 
-      if (game.gameState.phase === "PLAYER_ACTION") {
-        setLastSpawnTurnKey(`${game.gameState.turnNumber}-${game.currentPlayer}`)
-      }
+      await spawnMinion(type, popup.row, popup.col)
 
       appendTimelineLog(
         game.gameState.phase === "FREE_SPAWN"
@@ -364,11 +382,14 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
           : `Player ${game.currentPlayer} spawned ${type} at (${popup.row}, ${popup.col})`
       )
 
-      setSelectingType(false)
-      setPopup(null)
+      if (shouldAutoEndTurn) {
+        await endTurn()
+      }
 
       await loadGame()
     } catch {
+      pendingAutoAdvanceTurnKeyRef.current = null
+      setIsResolvingTurn(false)
       alert("Spawn failed")
     }
   }
@@ -424,39 +445,6 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
     }
   }
 
-  useEffect(() => {
-    if (!game || game.gameOver) {
-      return
-    }
-
-    const phase = game.gameState.phase
-    const currentTurnKey = `${game.gameState.turnNumber}-${game.currentPlayer}`
-    const hasBoughtHexThisTurn = lastBoughtHexTurnKey === currentTurnKey
-    const hasSpawnedThisTurn = lastSpawnTurnKey === currentTurnKey
-    const effectiveMode = wsRoomId ? roomState?.mode : setupSummary?.mode
-    const isSolitaire = effectiveMode === "SOLITAIRE"
-    const isAutoMode = effectiveMode === "AUTO"
-    const isBotTurn = isAutoMode || (isSolitaire && game.currentPlayer === 2)
-    const isRemotePlayerTurn = !!wsRoomId && localPlayerId != null && localPlayerId !== game.currentPlayer
-    const isInteractiveTurn = !isBotTurn && !isRemotePlayerTurn
-
-    if (
-      phase !== "PLAYER_ACTION" ||
-      !isInteractiveTurn ||
-      !hasBoughtHexThisTurn ||
-      !hasSpawnedThisTurn
-    ) {
-      return
-    }
-
-    if (autoEndTurnKeyRef.current === currentTurnKey) {
-      return
-    }
-
-    autoEndTurnKeyRef.current = currentTurnKey
-    void handleEndTurn()
-  }, [game, lastBoughtHexTurnKey, lastSpawnTurnKey, localPlayerId, setupSummary?.mode, wsRoomId])
-
   if (loading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-[#111] text-white">
@@ -486,7 +474,7 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
   const isAutoMode = effectiveMode === "AUTO"
   const isBotTurn = isAutoMode || (isSolitaire && game.currentPlayer === 2)
   const isRemotePlayerTurn = !!wsRoomId && localPlayerId != null && localPlayerId !== game.currentPlayer
-  const isInteractiveTurn = !isBotTurn && !isRemotePlayerTurn
+  const isInteractiveTurn = !isBotTurn && !isRemotePlayerTurn && !isResolvingTurn
   const boardMinions = toRuntimeMinions(game.gameState.minions ?? []).map((minion) => ({
     ...minion,
     hpPercent: resolveHpPercent(minion),
@@ -682,9 +670,9 @@ export default function GameplayPage({ onPlayAgain, wsRoomId, localPlayerName, l
                 </div>
               </div>
 
-              <button
-                onClick={handleEndTurn}
-                disabled={isGameOver || !isInteractiveTurn}
+                <button
+                  onClick={handleEndTurn}
+                  disabled={isGameOver || !isInteractiveTurn}
                 className="px-5 sm:px-7 py-2 rounded-full text-white font-semibold text-sm tracking-[0.2em] transition-all duration-300 transform bg-gradient-to-r from-[#FF3D00] to-[#ECDB46] hover:scale-105 hover:shadow-xl shadow-md hover:shadow-[0_0_25px_rgba(255,120,0,0.7)]"
               >
                 {isAutoMode ? "AUTO RUNNING" : isBotTurn ? "BOT TURN" : isRemotePlayerTurn ? "OPPONENT TURN" : "ENDTURN"}
