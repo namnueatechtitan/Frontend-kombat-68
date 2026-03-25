@@ -338,20 +338,17 @@ function App() {
       return
     }
 
-    if (isRoomDuelGuest) {
+    if (isRoomDuelGuest && wsRoomState.setupPhase !== "PRE_BATTLE") {
       setPage("lobby")
       switch (wsRoomState.setupPhase) {
         case "MINION_TYPE_COUNT":
-          setRoomStatusText("Waiting for host to choose duel minion count.")
+          setRoomStatusText("Waiting for host to choose minion count.")
           break
         case "CHARACTER_SELECT":
-          setRoomStatusText("Waiting for host to choose the duel character alignment.")
+          setRoomStatusText("Waiting for host to choose the character alignment.")
           break
         case "MINION_SETUP":
-          setRoomStatusText("Waiting for host to finish the shared duel setup.")
-          break
-        case "PRE_BATTLE":
-          setRoomStatusText("Waiting for host to launch the match.")
+          setRoomStatusText("Waiting for host to finish the room setup.")
           break
         default:
           setRoomStatusText(null)
@@ -403,7 +400,7 @@ function App() {
       }
       case "PRE_BATTLE":
         setPage("preBattle")
-        setRoomStatusText("Room setup complete. Start game from pre-battle.")
+        setRoomStatusText(null)
         break
       case "FINISHED":
         break

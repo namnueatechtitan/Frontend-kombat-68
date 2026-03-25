@@ -17,31 +17,31 @@ import supportPortrait from "../assets/images/minions/Human/human_support_previe
 export const humanMinions: MinionData[] = [
   {
     type: "FIGHTER",
-    name: "TANJIRO",
+    name: "FIGHTER",
     image: fighterPortrait,
     preview: fighterPreview,
   },
   {
     type: "ASSASSIN",
-    name: "YORIICHI",
+    name: "ASSASSIN",
     image: assassinPortrait,
     preview: assassinPreview,
   },
   {
     type: "DPS",
-    name: "GIYU",
+    name: "DPS",
     image: dpsPortrait,
     preview: dpsPreview,
   },
   {
     type: "TANK",
-    name: "KYOJURO",
+    name: "TANK",
     image: tankPortrait,
     preview: tankPreview,
   },
   {
     type: "SUPPORT",
-    name: "INOSUKE",
+    name: "SUPPORT",
     image: supportPortrait,
     preview: supportPreview,
   },

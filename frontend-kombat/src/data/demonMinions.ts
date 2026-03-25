@@ -17,31 +17,31 @@ import supportPortrait from "../assets/images/minions/Demon/demon_support_previe
 export const demonMinions: MinionData[] = [
   {
     type: "FIGHTER",
-    name: "MUZAN",
+    name: "FIGHTER",
     image: fighterPortrait,
     preview: fighterPreview,
   },
   {
     type: "ASSASSIN",
-    name: "KOKUSHIBO",
+    name: "ASSASSIN",
     image: assassinPortrait,
     preview: assassinPreview,
   },
   {
     type: "DPS",
-    name: "DOMA",
+    name: "DPS",
     image: dpsPortrait,
     preview: dpsPreview,
   },
   {
     type: "TANK",
-    name: "AKAZA",
+    name: "TANK",
     image: tankPortrait,
     preview: tankPreview,
   },
   {
     type: "SUPPORT",
-    name: "NAKIME",
+    name: "SUPPORT",
     image: supportPortrait,
     preview: supportPreview,
   },
