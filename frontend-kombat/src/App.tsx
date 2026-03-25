@@ -139,6 +139,8 @@ function App() {
   const activeSetupPlayer = (wsRoomId && wsPlayerId ? wsPlayerId : setupPlayer) as 1 | 2
   const effectiveMode = (wsRoomId ? wsRoomState?.mode : selectedMode) ?? null
   const usesSharedDuelSetup = effectiveMode === "DUEL"
+  const isHostManagedRoomMode =
+    !!wsRoomId && (wsRoomState?.mode === "DUEL" || wsRoomState?.mode === "AUTO")
   const currentMinions = usesSharedDuelSetup ? sharedMinions : minionsByPlayer[activeSetupPlayer]
   const effectiveRoomMinionTypeCount = wsRoomState?.effectiveMinionTypeCount ?? minionTypeCount
   const roomPhase = wsRoomState?.setupPhase
@@ -146,6 +148,7 @@ function App() {
   const isRoomCharacterTurn = !!wsRoomId && roomPhase === "CHARACTER_SELECT"
   const isRoomMinionSetupTurn = !!wsRoomId && roomPhase === "MINION_SETUP"
   const roomConfig = wsRoomState?.config as GameConfig | undefined
+  const isRoomDuelGuest = isHostManagedRoomMode && wsPlayerId === 2
 
   const openRoomConfig = (returnPage: AppPage = page) => {
     setConfigReturnPage(returnPage)
@@ -340,6 +343,28 @@ function App() {
       return
     }
 
+    if (isRoomDuelGuest) {
+      setPage("lobby")
+      switch (wsRoomState.setupPhase) {
+        case "MINION_TYPE_COUNT":
+          setRoomStatusText("Waiting for host to choose duel minion count.")
+          break
+        case "CHARACTER_SELECT":
+          setRoomStatusText("Waiting for host to choose the duel character alignment.")
+          break
+        case "MINION_SETUP":
+          setRoomStatusText("Waiting for host to finish the shared duel setup.")
+          break
+        case "PRE_BATTLE":
+          setRoomStatusText("Waiting for host to launch the match.")
+          break
+        default:
+          setRoomStatusText(null)
+          break
+      }
+      return
+    }
+
     if (!wsRoomState.setupPhase) {
       return
     }
@@ -351,16 +376,16 @@ function App() {
       case "MINION_TYPE_COUNT":
         setPage("minionType")
         setRoomStatusText(
-          wsRoomState.mode === "DUEL"
-            ? "Host chooses duel minion count. The other player waits for setup to continue."
+          (wsRoomState.mode === "DUEL" || wsRoomState.mode === "AUTO")
+            ? "Host chooses minion count. The other player waits for setup to continue."
             : "Both players can choose minion type count now"
         )
         break
       case "CHARACTER_SELECT":
         setPage("selectUI")
         setRoomStatusText(
-          wsRoomState.mode === "DUEL"
-            ? "Player 1 chooses the duel character alignment. Player 2 is assigned automatically."
+          (wsRoomState.mode === "DUEL" || wsRoomState.mode === "AUTO")
+            ? "Player 1 chooses the character alignment. Player 2 is assigned automatically."
             : "Both players can choose character now"
         )
         break
@@ -370,11 +395,11 @@ function App() {
         if (page !== "strategy") {
           setPage(localCharacter === "DEMON" ? "minionSetupDemon" : "minionSetupHuman")
         }
-        if (wsRoomState.mode === "DUEL") {
+        if (wsRoomState.mode === "DUEL" || wsRoomState.mode === "AUTO") {
           setRoomStatusText(
             wsPlayerId === 1
-              ? "Host is configuring the shared duel minion set."
-              : "Host is configuring the shared duel minion set. Please wait."
+              ? "Host is configuring the room setup."
+              : "Host is configuring the room setup. Please wait."
           )
         } else {
           setRoomStatusText("Both players can configure minions and strategies now")
@@ -388,7 +413,7 @@ function App() {
       case "FINISHED":
         break
     }
-  }, [page, selectedMode, wsPlayerId, wsRoomState])
+  }, [isRoomDuelGuest, page, selectedMode, wsPlayerId, wsRoomState])
 
   useEffect(() => {
     if (!wsRoomId || !usesSharedDuelSetup) {
@@ -453,8 +478,8 @@ function App() {
           alert("Not your setup turn yet")
           return
         }
-        if (wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
-          alert("Only the host can configure duel minions")
+        if ((wsRoomState?.mode === "DUEL" || wsRoomState?.mode === "AUTO") && wsPlayerId !== 1) {
+          alert("Only the host can configure this room mode")
           return
         }
         stompWs.send("/app/submit-room-minion-setup", {
@@ -662,8 +687,8 @@ function App() {
                   alert("Minion type selection is not available yet")
                   return
                 }
-                if (wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
-                  alert("Only the host can choose duel minion count")
+                if ((wsRoomState?.mode === "DUEL" || wsRoomState?.mode === "AUTO") && wsPlayerId !== 1) {
+                  alert("Only the host can choose minion count in this room mode")
                   return
                 }
                 setMinionTypeCount(count)
@@ -695,8 +720,8 @@ function App() {
                   alert("Character selection is not available yet")
                   return
                 }
-                if (wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
-                  alert("Player 1 chooses the duel character alignment")
+                if ((wsRoomState?.mode === "DUEL" || wsRoomState?.mode === "AUTO") && wsPlayerId !== 1) {
+                  alert("Player 1 chooses the character alignment in this room mode")
                   return
                 }
                 setCurrentFaction(uiType)
@@ -750,8 +775,8 @@ function App() {
               alert("Minion setup is not available yet")
               return
             }
-            if (wsRoomId && wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
-              alert("Only the host can configure duel minions")
+            if (wsRoomId && (wsRoomState?.mode === "DUEL" || wsRoomState?.mode === "AUTO") && wsPlayerId !== 1) {
+              alert("Only the host can configure this room mode")
               return
             }
             setSelectedMinion({
@@ -776,8 +801,8 @@ function App() {
               alert("Minion setup is not available yet")
               return
             }
-            if (wsRoomId && wsRoomState?.mode === "DUEL" && wsPlayerId !== 1) {
-              alert("Only the host can configure duel minions")
+            if (wsRoomId && (wsRoomState?.mode === "DUEL" || wsRoomState?.mode === "AUTO") && wsPlayerId !== 1) {
+              alert("Only the host can configure this room mode")
               return
             }
             setSelectedMinion({
