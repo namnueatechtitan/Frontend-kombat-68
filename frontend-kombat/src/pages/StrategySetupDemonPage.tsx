@@ -89,45 +89,45 @@ export default function StrategySetupDemonPage({
   const isAssassinDemon = minion.type === "ASSASSIN"
 
   const templates: Record<TemplateType, string> = {
-    AGGRESSIVE: `o = opponent;
+    AGGRESSIVE: `{
+  x = 200;
 
-if (o) then {
-  d = o % 10;
-  dist = o / 10;
+  if (1 / ((((nearby up % 10) - 1) ^ 2) + 1)) then { shoot up x; done; } else
+  if (1 / ((((nearby upright % 10) - 1) ^ 2) + 1)) then { shoot upright x; done; } else
+  if (1 / ((((nearby downright % 10) - 1) ^ 2) + 1)) then { shoot downright x; done; } else
+  if (1 / ((((nearby down % 10) - 1) ^ 2) + 1)) then { shoot down x; done; } else
+  if (1 / ((((nearby downleft % 10) - 1) ^ 2) + 1)) then { shoot downleft x; done; } else
+  if (1 / ((((nearby upleft % 10) - 1) ^ 2) + 1)) then { shoot upleft x; done; } else {
 
-  if (dist - 1) then {
-    if (1 / ((d - 1) ^ 2 + 1)) then { move up; done; } else
-    if (1 / ((d - 2) ^ 2 + 1)) then { move upright; done; } else
-    if (1 / ((d - 3) ^ 2 + 1)) then { move downright; done; } else
-    if (1 / ((d - 4) ^ 2 + 1)) then { move down; done; } else
-    if (1 / ((d - 5) ^ 2 + 1)) then { move downleft; done; } else
-    { move upleft; done; }
-  } else {
-    x = 200;
-    if (1 / ((d - 1) ^ 2 + 1)) then { shoot up x; done; } else
-    if (1 / ((d - 2) ^ 2 + 1)) then { shoot upright x; done; } else
-    if (1 / ((d - 3) ^ 2 + 1)) then { shoot downright x; done; } else
-    if (1 / ((d - 4) ^ 2 + 1)) then { shoot down x; done; } else
-    if (1 / ((d - 5) ^ 2 + 1)) then { shoot downleft x; done; } else
-    { shoot upleft x; done; }
+    o = opponent;
+    d = o % 10;
+
+    if (o) then {
+      if (1 / (((d - 1) ^ 2) + 1)) then { move up; done; } else
+      if (1 / (((d - 2) ^ 2) + 1)) then { move upright; done; } else
+      if (1 / (((d - 3) ^ 2) + 1)) then { move downright; done; } else
+      if (1 / (((d - 4) ^ 2) + 1)) then { move down; done; } else
+      if (1 / (((d - 5) ^ 2) + 1)) then { move downleft; done; } else
+      { move upleft; done; }
+    } else {
+
+      if (1 / (row ^ 2 + 1)) then { move down; done; } else
+      if (1 / (((7 - row) ^ 2) + 1)) then { move up; done; } else
+      if (1 / (col ^ 2 + 1)) then { move downright; done; } else
+      if (1 / (((7 - col) ^ 2) + 1)) then { move upleft; done; } else {
+
+        r = random % 6;
+
+        if (1 / ((r ^ 2) + 1)) then { move up; done; } else
+        if (1 / (((r - 1) ^ 2) + 1)) then { move upright; done; } else
+        if (1 / (((r - 2) ^ 2) + 1)) then { move downright; done; } else
+        if (1 / (((r - 3) ^ 2) + 1)) then { move down; done; } else
+        if (1 / (((r - 4) ^ 2) + 1)) then { move downleft; done; } else
+        { move upleft; done; }
+      }
+    }
   }
-} else {
-  if (1 / (row ^ 2 + 1)) then { move down; done; } else
-  if (1 / (((7 - row) ^ 2) + 1)) then { move up; done; } else
-  if (1 / (col ^ 2 + 1)) then { move downright; done; } else
-  if (1 / (((7 - col) ^ 2) + 1)) then { move upleft; done; } else {
-    r = random % 6;
-
-    if (1 / (r ^ 2 + 1)) then { move up; done; } else
-    if (1 / ((r - 1) ^ 2 + 1)) then { move upright; done; } else
-    if (1 / ((r - 2) ^ 2 + 1)) then { move downright; done; } else
-    if (1 / ((r - 3) ^ 2 + 1)) then { move down; done; } else
-    if (1 / ((r - 4) ^ 2 + 1)) then { move downleft; done; } else
-    { move upleft; done; }
-  }
-}
-
-done;`,
+}`,
 
     DEFENSIVE: `o = opponent;
 
@@ -154,9 +154,41 @@ if (o) then {
 
 done;`,
 
-    RANDOM: `move up;
-shoot right 1;
-done;`,
+    RANDOM: `{
+  o = opponent;
+  d = o % 10;
+
+  if (o) then {
+    if (1 / (((d - 1) ^ 2) + 1)) then { move down; done; } else
+    if (1 / (((d - 2) ^ 2) + 1)) then { move downleft; done; } else
+    if (1 / (((d - 3) ^ 2) + 1)) then { move upleft; done; } else
+    if (1 / (((d - 4) ^ 2) + 1)) then { move up; done; } else
+    if (1 / (((d - 5) ^ 2) + 1)) then { move upright; done; } else
+    { move downright; done; }
+  } else {
+
+    a = ally;
+    ad = a % 10;
+
+    if (a) then {
+      if (1 / (((ad - 1) ^ 2) + 1)) then { move down; done; } else
+      if (1 / (((ad - 2) ^ 2) + 1)) then { move downleft; done; } else
+      if (1 / (((ad - 3) ^ 2) + 1)) then { move upleft; done; } else
+      if (1 / (((ad - 4) ^ 2) + 1)) then { move up; done; } else
+      if (1 / (((ad - 5) ^ 2) + 1)) then { move upright; done; } else
+      { move downright; done; }
+    } else {
+      r = random % 6;
+
+      if (1 / ((r ^ 2) + 1)) then { move up; done; } else
+      if (1 / (((r - 1) ^ 2) + 1)) then { move upright; done; } else
+      if (1 / (((r - 2) ^ 2) + 1)) then { move downright; done; } else
+      if (1 / (((r - 3) ^ 2) + 1)) then { move down; done; } else
+      if (1 / (((r - 4) ^ 2) + 1)) then { move downleft; done; } else
+      { move upleft; done; }
+    }
+  }
+}`,
   }
 
   function handleTemplateClick(type: TemplateType) {
